@@ -25,7 +25,13 @@ import {
 const PROVIDERS: Array<{ id: AiProvider; label: string; hint: string }> = [
   { id: "anthropic", label: "Anthropic", hint: "Claude models via api.anthropic.com" },
   { id: "openai", label: "OpenAI", hint: "GPT models via api.openai.com" },
-  { id: "custom", label: "Custom / Ollama", hint: "Any OpenAI-compatible endpoint (key optional)" },
+  {
+    id: "custom",
+    label: "Custom / Ollama",
+    hint:
+      "Any OpenAI-compatible endpoint (key optional). Local URLs like localhost:11434 are called " +
+      "directly from your browser — Ollama must allow it: OLLAMA_ORIGINS=\"*\" ollama serve",
+  },
 ];
 
 const EMPTY_CONFIG: AiConfig = {

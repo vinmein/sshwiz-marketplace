@@ -18,6 +18,26 @@ interface AiRequestBody {
 
 const nonEmpty = (s: string | undefined) => (s && s.trim() !== "" ? s.trim() : undefined);
 
+/** A base URL this server could never usefully reach — localhost/private
+    addresses refer to THIS server's network, not the caller's machine.
+    (Duplicated from lib/ai.ts isLocalBaseUrl, which is client-side.) */
+const isLocalBase = (baseUrl: string): boolean => {
+  try {
+    const host = new URL(baseUrl).hostname;
+    return (
+      host === "localhost" ||
+      host.endsWith(".localhost") ||
+      host === "[::1]" ||
+      /^127\./.test(host) ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+    );
+  } catch {
+    return false;
+  }
+};
+
 export async function POST(req: Request) {
   const authError = await validateAdminOrApiKey(req);
   if (authError) return authError;
@@ -40,11 +60,29 @@ export async function POST(req: Request) {
   if (provider !== "custom" && !apiKey) {
     return NextResponse.json({ error: "API key required — set it in AI settings." }, { status: 400 });
   }
+  const baseUrl = nonEmpty(body.baseUrl);
+  if (provider === "custom" && !baseUrl) {
+    return NextResponse.json(
+      { error: "baseUrl is required for the custom provider — it must be publicly reachable." },
+      { status: 400 },
+    );
+  }
+  if (baseUrl && isLocalBase(baseUrl)) {
+    return NextResponse.json(
+      {
+        error:
+          `${baseUrl} is a local address — on this server that would be the server's own network, ` +
+          "not your machine. The portal calls local endpoints (e.g. Ollama) directly from your " +
+          "browser; API callers must use a publicly reachable base URL.",
+      },
+      { status: 400 },
+    );
+  }
 
   try {
     let text: string;
     if (provider === "anthropic") {
-      const base = nonEmpty(body.baseUrl) ?? "https://api.anthropic.com";
+      const base = baseUrl ?? "https://api.anthropic.com";
       const res = await fetch(`${base}/v1/messages`, {
         method: "POST",
         headers: {
@@ -75,10 +113,8 @@ export async function POST(req: Request) {
         .map((c) => c.text ?? "")
         .join("");
     } else {
-      // openai and custom (any OpenAI-compatible endpoint, e.g. Ollama)
-      const base =
-        nonEmpty(body.baseUrl) ??
-        (provider === "openai" ? "https://api.openai.com/v1" : "http://localhost:11434/v1");
+      // openai and custom (any OpenAI-compatible endpoint)
+      const base = baseUrl ?? "https://api.openai.com/v1";
       const res = await fetch(`${base}/chat/completions`, {
         method: "POST",
         headers: {

@@ -53,11 +53,37 @@ export function clearAiConfig() {
   }
 }
 
-/** One completion via our /api/ai proxy (browsers can't call providers
-    directly). Authenticated with the signed-in admin's Firebase ID token —
-    the proxy verifies it against the admins collection, so no marketplace
-    API key is needed from the portal. */
+/** Hostnames the portal SERVER could never reach (they'd be the server's own
+    loopback / private network, not the admin's). Local endpoints are called
+    straight from the browser instead — that's where "localhost" means the
+    admin's machine. */
+export function isLocalBaseUrl(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname;
+    return (
+      host === "localhost" ||
+      host.endsWith(".localhost") ||
+      host === "[::1]" ||
+      /^127\./.test(host) ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** One completion. Cloud providers go through our /api/ai proxy (browsers
+    can't call them directly — CORS), authenticated with the signed-in
+    admin's Firebase ID token. Local/private custom endpoints (e.g. Ollama)
+    are called directly from the browser, since the deployed proxy can't
+    reach the admin's machine. */
 export async function aiComplete(config: AiConfig, system: string, prompt: string): Promise<string> {
+  const baseUrl = config.baseUrl.trim() || PROVIDER_DEFAULTS[config.provider].baseUrl;
+  if (config.provider === "custom" && isLocalBaseUrl(baseUrl)) {
+    return completeDirect({ ...config, baseUrl }, system, prompt);
+  }
   const headers: Record<string, string> = { "content-type": "application/json" };
   const idToken = await auth().currentUser?.getIdToken().catch(() => undefined);
   if (idToken) headers["authorization"] = `Bearer ${idToken}`;
@@ -69,6 +95,44 @@ export async function aiComplete(config: AiConfig, system: string, prompt: strin
   const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
   if (!res.ok || !data.text) throw new Error(data.error ?? `AI request failed (HTTP ${res.status}).`);
   return data.text;
+}
+
+/** Browser → OpenAI-compatible endpoint on the admin's own machine/network.
+    Needs the endpoint to allow this origin via CORS; the error message spells
+    out the Ollama incantation because that's the common case. */
+async function completeDirect(config: AiConfig, system: string, prompt: string): Promise<string> {
+  const base = config.baseUrl.replace(/\/+$/, "");
+  let res: Response;
+  try {
+    res = await fetch(`${base}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(config.apiKey ? { authorization: `Bearer ${config.apiKey}` } : {}),
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [
+          ...(system ? [{ role: "system", content: system }] : []),
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+  } catch {
+    throw new Error(
+      `Could not reach ${base} from this browser. Check the server is running, and that it allows ` +
+        `this origin — for Ollama, restart it with OLLAMA_ORIGINS=${typeof location !== "undefined" ? location.origin : "<portal origin>"} ` +
+        `(or OLLAMA_ORIGINS="*").`,
+    );
+  }
+  const data = (await res.json().catch(() => ({}))) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    error?: { message?: string };
+  };
+  if (!res.ok) throw new Error(data.error?.message ?? `Provider error (HTTP ${res.status}).`);
+  const text = data.choices?.[0]?.message?.content ?? "";
+  if (!text.trim()) throw new Error("The provider returned an empty reply.");
+  return text;
 }
 
 // --- Prompts (mirroring the desktop app) -----------------------------------
