@@ -5,6 +5,7 @@
 
 import type { MarketPackage, MarketScript, MarketScriptParam } from "./types";
 import { FAMILIES } from "./types";
+import { auth } from "./firebase";
 
 // --- Provider config -------------------------------------------------------
 
@@ -52,10 +53,14 @@ export function clearAiConfig() {
   }
 }
 
-/** One completion via our /api/ai proxy (browsers can't call providers directly). */
-export async function aiComplete(config: AiConfig, system: string, prompt: string, marketplaceApiKey?: string): Promise<string> {
+/** One completion via our /api/ai proxy (browsers can't call providers
+    directly). Authenticated with the signed-in admin's Firebase ID token —
+    the proxy verifies it against the admins collection, so no marketplace
+    API key is needed from the portal. */
+export async function aiComplete(config: AiConfig, system: string, prompt: string): Promise<string> {
   const headers: Record<string, string> = { "content-type": "application/json" };
-  if (marketplaceApiKey) headers["authorization"] = `Bearer ${marketplaceApiKey}`;
+  const idToken = await auth().currentUser?.getIdToken().catch(() => undefined);
+  if (idToken) headers["authorization"] = `Bearer ${idToken}`;
   const res = await fetch("/api/ai", {
     method: "POST",
     headers,

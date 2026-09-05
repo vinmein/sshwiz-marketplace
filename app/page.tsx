@@ -281,7 +281,7 @@ function Dashboard() {
         </button>
       </div>
 
-      {tab === "ai" && <AiAgent marketplaceApiKey={marketplaceKey || undefined} />}
+      {tab === "ai" && <AiAgent />}
 
       {tab === "apikeys" && (
         <ApiKeysTab

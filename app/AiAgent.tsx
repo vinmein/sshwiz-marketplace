@@ -37,7 +37,7 @@ const EMPTY_CONFIG: AiConfig = {
 
 /** The 🤖 AI agent tab: configure a provider, generate a package or script
     draft, review it (danger flags included), save it unpublished. */
-export default function AiAgent({ marketplaceApiKey }: { marketplaceApiKey?: string }) {
+export default function AiAgent() {
   const [config, setConfig] = useState<AiConfig>(EMPTY_CONFIG);
   const [configLoaded, setConfigLoaded] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -83,7 +83,7 @@ export default function AiAgent({ marketplaceApiKey }: { marketplaceApiKey?: str
     setStatus("Contacting provider…");
     try {
       saveAiConfig(config);
-      const reply = await aiComplete(config, "", "Reply with exactly: OK", marketplaceApiKey);
+      const reply = await aiComplete(config, "", "Reply with exactly: OK");
       setStatus(`Provider responded: “${reply.trim().slice(0, 60)}” — AI is ready.`);
       setShowSettings(false);
     } catch (err) {
@@ -112,8 +112,8 @@ export default function AiAgent({ marketplaceApiKey }: { marketplaceApiKey?: str
     try {
       text =
         mode === "package"
-          ? await aiComplete(config, RECIPE_SYSTEM, recipePrompt(prompt.trim(), family), marketplaceApiKey)
-          : await aiComplete(config, SCRIPT_SYSTEM, scriptPrompt(prompt.trim(), family), marketplaceApiKey);
+          ? await aiComplete(config, RECIPE_SYSTEM, recipePrompt(prompt.trim(), family))
+          : await aiComplete(config, SCRIPT_SYSTEM, scriptPrompt(prompt.trim(), family));
       if (mode === "package") {
         const parsed = parsePackageReply(text, family !== "all" ? family : "ubuntu");
         if (family !== "all") {

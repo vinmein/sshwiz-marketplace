@@ -164,6 +164,70 @@ export async function validateApiKey(req: Request): Promise<Response | null> {
   return null; // Authorized ✓
 }
 
+/** Pull the uid out of a Firebase ID token WITHOUT verifying it — the
+    verification happens in validateAdminOrApiKey: Firestore checks the
+    token's signature/expiry, and the rules only let uid read admins/{uid}. */
+function decodeJwtUid(token: string): string | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))) as {
+      user_id?: unknown;
+      sub?: unknown;
+    };
+    const uid = payload.user_id ?? payload.sub;
+    return typeof uid === "string" && uid !== "" ? uid : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Authorize either a marketplace API key (mk_…) or a signed-in admin's
+ * Firebase ID token. Used by /api/ai, which the admin portal calls with the
+ * admin's own session — no marketplace key needed there.
+ *
+ * The admin check is credential-free: we read admins/{uid} over Firestore
+ * REST with the caller's ID token as the bearer. Firestore rejects forged or
+ * expired tokens, and the security rules only allow the read when the token's
+ * uid matches AND the admin doc exists.
+ */
+export async function validateAdminOrApiKey(req: Request): Promise<Response | null> {
+  const raw = extractApiKey(req);
+  if (!raw) {
+    return NextResponse.json(
+      { error: "Missing API key. Provide it via Authorization: Bearer <key> or x-api-key header." },
+      { status: 401, headers: corsHeaders() },
+    );
+  }
+
+  const uid = decodeJwtUid(raw);
+  if (!uid) return validateApiKey(req); // not a JWT → treat as a marketplace key
+
+  const rl = checkRateLimit(uid);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Try again later." },
+      {
+        status: 429,
+        headers: { ...corsHeaders(), "retry-after": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    );
+  }
+
+  const res = await fetch(`${base()}/admins/${uid}${keyParam()}`, {
+    headers: { authorization: `Bearer ${raw}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => null);
+  if (res?.ok) return null; // Authorized ✓
+
+  return NextResponse.json(
+    { error: "Admin session invalid or expired — sign in again." },
+    { status: 401, headers: corsHeaders() },
+  );
+}
+
 function corsHeaders(): Record<string, string> {
   return {
     "access-control-allow-origin": "*",
