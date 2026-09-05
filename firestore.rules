@@ -20,6 +20,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // API keys: the server validates keys via REST (anonymous read of hashes
+    // is safe — the hash is useless without the raw key). Only admins may
+    // create, update, or delete keys through the admin portal.
+    match /apiKeys/{keyId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Admin allowlist: create these documents from the Firebase console
     // (doc ID = the user's Auth UID). Users can only check their own entry;
     // nobody can grant themselves admin through the client.

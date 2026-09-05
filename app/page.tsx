@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
 import {
@@ -187,11 +187,68 @@ function useCollection<T>(name: string): Row<T>[] {
   return rows;
 }
 
+// ---------------------------------------------------------------------------
+// API Key helpers
+// ---------------------------------------------------------------------------
+
+const MARKETPLACE_KEY_STORE = "sshwiz-marketplace-api-key";
+
+function loadMarketplaceKey(): string {
+  try {
+    return localStorage.getItem(MARKETPLACE_KEY_STORE) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function saveMarketplaceKey(key: string) {
+  try {
+    if (key) localStorage.setItem(MARKETPLACE_KEY_STORE, key);
+    else localStorage.removeItem(MARKETPLACE_KEY_STORE);
+  } catch {}
+}
+
+async function sha256(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function generateRawKey(): string {
+  const bytes = new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return "mk_" + Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+interface ApiKeyDoc {
+  name: string;
+  keyHash: string;
+  keyPrefix: string;
+  enabled: boolean;
+  createdAt: unknown;
+  lastUsedAt: unknown;
+}
+
+// ---------------------------------------------------------------------------
+
 function Dashboard() {
-  const [tab, setTab] = useState<"packages" | "scripts" | "ai">("packages");
+  const [tab, setTab] = useState<"packages" | "scripts" | "ai" | "apikeys">("packages");
   const packages = useCollection<MarketPackage>("packages");
   const scripts = useCollection<MarketScript>("scripts");
+  const apiKeys = useCollection<ApiKeyDoc>("apiKeys");
   const [editing, setEditing] = useState<string | null>(null); // doc id or "new"
+  const [marketplaceKey, setMarketplaceKey] = useState("");
+
+  useEffect(() => {
+    setMarketplaceKey(loadMarketplaceKey());
+  }, []);
+
+  const updateMarketplaceKey = useCallback((key: string) => {
+    setMarketplaceKey(key);
+    saveMarketplaceKey(key);
+  }, []);
 
   useEffect(() => setEditing(null), [tab]);
 
@@ -219,11 +276,22 @@ function Dashboard() {
         <button className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")}>
           🤖 AI agent
         </button>
+        <button className={tab === "apikeys" ? "active" : ""} onClick={() => setTab("apikeys")}>
+          🔑 API Keys ({apiKeys.length})
+        </button>
       </div>
 
-      {tab === "ai" && <AiAgent />}
+      {tab === "ai" && <AiAgent marketplaceApiKey={marketplaceKey || undefined} />}
 
-      {tab !== "ai" && rows.map((r) => (
+      {tab === "apikeys" && (
+        <ApiKeysTab
+          keys={apiKeys}
+          activeKey={marketplaceKey}
+          onSetActiveKey={updateMarketplaceKey}
+        />
+      )}
+
+      {tab !== "ai" && tab !== "apikeys" && rows.map((r) => (
         <div className="card" key={r.id}>
           <div className="row">
             <span className="icon">{r.data.icon || (tab === "packages" ? "📦" : "📜")}</span>
@@ -253,7 +321,7 @@ function Dashboard() {
         </div>
       ))}
 
-      {tab !== "ai" &&
+      {tab !== "ai" && tab !== "apikeys" &&
         (editing === "new" ? (
           <div className="card">
             {tab === "packages" ? (
@@ -268,6 +336,187 @@ function Dashboard() {
           </button>
         ))}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// API Keys tab
+// ---------------------------------------------------------------------------
+
+function ApiKeysTab({
+  keys,
+  activeKey,
+  onSetActiveKey,
+}: {
+  keys: Row<ApiKeyDoc>[];
+  activeKey: string;
+  onSetActiveKey: (key: string) => void;
+}) {
+  const [newKeyName, setNewKeyName] = useState("");
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  async function createKey() {
+    const name = newKeyName.trim();
+    if (!name) {
+      setError("Give the key a descriptive name.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setCreatedKey(null);
+    try {
+      const rawKey = generateRawKey();
+      const keyHash = await sha256(rawKey);
+      const keyPrefix = rawKey.slice(0, 11) + "…";
+      const id = slugify(name) || `key-${Date.now()}`;
+      await setDoc(doc(db(), "apiKeys", id), {
+        name,
+        keyHash,
+        keyPrefix,
+        enabled: true,
+        createdAt: serverTimestamp(),
+        lastUsedAt: null,
+      });
+      setCreatedKey(rawKey);
+      setNewKeyName("");
+      // Auto-set as active key in this browser if none is set.
+      if (!activeKey) onSetActiveKey(rawKey);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleEnabled(id: string, enabled: boolean) {
+    await updateDoc(doc(db(), "apiKeys", id), { enabled: !enabled });
+  }
+
+  async function deleteKey(id: string, name: string) {
+    if (!window.confirm(`Delete API key "${name}"? Clients using this key will lose access.`)) return;
+    await deleteDoc(doc(db(), "apiKeys", id));
+  }
+
+  async function copyKey(key: string) {
+    try {
+      await navigator.clipboard.writeText(key);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }
+
+  const formatTs = (v: unknown) => {
+    if (!v || typeof v !== "object") return "—";
+    const ts = v as { seconds?: number; toDate?: () => Date };
+    if (ts.toDate) return ts.toDate().toLocaleString();
+    if (ts.seconds) return new Date(ts.seconds * 1000).toLocaleString();
+    return "—";
+  };
+
+  return (
+    <div>
+      <p className="muted">
+        API keys authenticate requests to all <code>/api/*</code> endpoints. Create a key here, then
+        include it in your requests as <code>Authorization: Bearer mk_…</code> or{" "}
+        <code>x-api-key: mk_…</code>.
+      </p>
+
+      {/* Active key for this browser */}
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>🖥️ This browser&apos;s active key</h2>
+        <p className="muted">
+          Stored in localStorage — used automatically for AI agent requests from this admin portal.
+        </p>
+        <div className="row">
+          <input
+            type="password"
+            className="grow"
+            value={activeKey}
+            onChange={(e) => onSetActiveKey(e.target.value)}
+            placeholder="Paste a marketplace API key here (mk_…)"
+            style={{ fontFamily: "monospace" }}
+          />
+          {activeKey && (
+            <button className="danger" onClick={() => onSetActiveKey("")}>
+              Clear
+            </button>
+          )}
+        </div>
+        {activeKey && (
+          <p className="muted" style={{ marginTop: 4 }}>
+            ✓ Key set ({activeKey.slice(0, 11)}…)
+          </p>
+        )}
+      </div>
+
+      {/* Create new key */}
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>Create a new API key</h2>
+        <div className="row">
+          <input
+            type="text"
+            className="grow"
+            value={newKeyName}
+            onChange={(e) => setNewKeyName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && createKey()}
+            placeholder='Descriptive name, e.g. "Production Desktop App"'
+          />
+          <button className="primary" onClick={createKey} disabled={busy}>
+            {busy ? "Creating…" : "Create key"}
+          </button>
+        </div>
+        {error && <p className="error">{error}</p>}
+        {createdKey && (
+          <div style={{ marginTop: 12, padding: 12, background: "var(--bg-card, #1a1a2e)", borderRadius: 8, border: "1px solid #4ecca3" }}>
+            <p>
+              <strong>🔑 Copy your API key now — it won&apos;t be shown again:</strong>
+            </p>
+            <div className="row">
+              <code className="grow" style={{ overflowWrap: "anywhere", fontSize: 13 }}>
+                {createdKey}
+              </code>
+              <button onClick={() => copyKey(createdKey)}>
+                {copied ? "✓ Copied" : "Copy"}
+              </button>
+              <button onClick={() => { onSetActiveKey(createdKey); }}>
+                Use in this browser
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Key list */}
+      {keys.length === 0 ? (
+        <p className="muted">No API keys yet. Create one above.</p>
+      ) : (
+        keys.map((k) => (
+          <div className="card" key={k.id}>
+            <div className="row">
+              <div className="grow">
+                <strong>{k.data.name}</strong>{" "}
+                <span className="muted">· {k.data.keyPrefix}</span>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  Created: {formatTs(k.data.createdAt)} · Last used: {formatTs(k.data.lastUsedAt)}
+                </div>
+              </div>
+              <span className={`pill ${k.data.enabled ? "live" : "draft"}`}>
+                {k.data.enabled ? "Active" : "Disabled"}
+              </span>
+              <button onClick={() => toggleEnabled(k.id, k.data.enabled)}>
+                {k.data.enabled ? "Disable" : "Enable"}
+              </button>
+              <button className="danger" onClick={() => deleteKey(k.id, k.data.name)}>
+                Delete
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
   );
 }
 

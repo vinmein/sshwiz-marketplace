@@ -1,4 +1,5 @@
 import { apiError, apiJson, apiOptions } from "@/lib/apiResponse";
+import { validateApiKey } from "@/lib/apiAuth";
 import { catalogConfigured, listPackages, listScripts } from "@/lib/catalog";
 
 // GET /api/marketplace/packages[?family=ubuntu|rhel|alpine]
@@ -7,6 +8,9 @@ import { catalogConfigured, listPackages, listScripts } from "@/lib/catalog";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request, ctx: { params: Promise<{ collection: string }> }) {
+  const authError = await validateApiKey(req);
+  if (authError) return authError;
+
   if (!catalogConfigured) return apiError("Marketplace is not configured.", 503);
   const { collection } = await ctx.params;
   try {

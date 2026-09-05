@@ -1,4 +1,5 @@
 import { apiError, apiJson, apiOptions } from "@/lib/apiResponse";
+import { validateApiKey } from "@/lib/apiAuth";
 import { catalogConfigured, getPackage, getScript } from "@/lib/catalog";
 
 // GET /api/marketplace/packages/{id}
@@ -8,9 +9,12 @@ import { catalogConfigured, getPackage, getScript } from "@/lib/catalog";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ collection: string; id: string }> },
 ) {
+  const authError = await validateApiKey(req);
+  if (authError) return authError;
+
   if (!catalogConfigured) return apiError("Marketplace is not configured.", 503);
   const { collection, id } = await ctx.params;
   try {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validateApiKey } from "@/lib/apiAuth";
 
 // Proxy one AI completion for the AI agent tab. The browser can't call the
 // providers directly (CORS), so the admin's own key passes through here per
@@ -18,6 +19,9 @@ interface AiRequestBody {
 const nonEmpty = (s: string | undefined) => (s && s.trim() !== "" ? s.trim() : undefined);
 
 export async function POST(req: Request) {
+  const authError = await validateApiKey(req);
+  if (authError) return authError;
+
   let body: AiRequestBody;
   try {
     body = (await req.json()) as AiRequestBody;

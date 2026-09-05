@@ -53,10 +53,12 @@ export function clearAiConfig() {
 }
 
 /** One completion via our /api/ai proxy (browsers can't call providers directly). */
-export async function aiComplete(config: AiConfig, system: string, prompt: string): Promise<string> {
+export async function aiComplete(config: AiConfig, system: string, prompt: string, marketplaceApiKey?: string): Promise<string> {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (marketplaceApiKey) headers["authorization"] = `Bearer ${marketplaceApiKey}`;
   const res = await fetch("/api/ai", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify({ ...config, system, prompt }),
   });
   const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };

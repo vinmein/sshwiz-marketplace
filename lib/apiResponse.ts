@@ -5,7 +5,8 @@ import { NextResponse } from "next/server";
 
 const CORS = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET, OPTIONS",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "Content-Type, Authorization, x-api-key",
 };
 
 export function apiJson(data: unknown, status = 200) {
