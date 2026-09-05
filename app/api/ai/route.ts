@@ -92,7 +92,7 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           model,
-          max_tokens: 4096,
+          max_tokens: 8192,
           system,
           messages: [{ role: "user", content: prompt }],
         }),
@@ -100,11 +100,18 @@ export async function POST(req: Request) {
       });
       const data = (await res.json().catch(() => ({}))) as {
         content?: Array<{ type: string; text?: string }>;
+        stop_reason?: string;
         error?: { message?: string };
       };
       if (!res.ok) {
         return NextResponse.json(
           { error: data.error?.message ?? `Anthropic error (HTTP ${res.status}).` },
+          { status: 502 },
+        );
+      }
+      if (data.stop_reason === "max_tokens") {
+        return NextResponse.json(
+          { error: "The reply was cut off at the output token limit — try again, or ask for a smaller script." },
           { status: 502 },
         );
       }
@@ -131,12 +138,18 @@ export async function POST(req: Request) {
         signal: AbortSignal.timeout(55_000),
       });
       const data = (await res.json().catch(() => ({}))) as {
-        choices?: Array<{ message?: { content?: string } }>;
+        choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
         error?: { message?: string };
       };
       if (!res.ok) {
         return NextResponse.json(
           { error: data.error?.message ?? `Provider error (HTTP ${res.status}).` },
+          { status: 502 },
+        );
+      }
+      if (data.choices?.[0]?.finish_reason === "length") {
+        return NextResponse.json(
+          { error: "The reply was cut off at the output token limit — try again, or ask for a smaller script." },
           { status: 502 },
         );
       }

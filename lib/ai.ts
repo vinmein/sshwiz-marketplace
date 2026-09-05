@@ -126,10 +126,13 @@ async function completeDirect(config: AiConfig, system: string, prompt: string):
     );
   }
   const data = (await res.json().catch(() => ({}))) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
     error?: { message?: string };
   };
   if (!res.ok) throw new Error(data.error?.message ?? `Provider error (HTTP ${res.status}).`);
+  if (data.choices?.[0]?.finish_reason === "length") {
+    throw new Error("The reply was cut off at the output token limit — raise the model's output limit or ask for a smaller script.");
+  }
   const text = data.choices?.[0]?.message?.content ?? "";
   if (!text.trim()) throw new Error("The provider returned an empty reply.");
   return text;
@@ -199,6 +202,12 @@ export const scriptPrompt = (request: string, family?: string) =>
 
 export function parseLooseJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*\n([\s\S]*?)```/);
+  if (!fenced && /```(?:json)?\s*\n/.test(text)) {
+    // Opening fence but no closing one — the provider cut the reply off.
+    throw new Error(
+      "The reply was cut off before the JSON finished (output token limit) — generate again, or ask for a smaller script.",
+    );
+  }
   const raw = (fenced ? fenced[1] : text).trim();
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
