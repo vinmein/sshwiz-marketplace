@@ -16,6 +16,13 @@ import {
 import { auth, db, firebaseConfigured } from "@/lib/firebase";
 import AiAgent from "./AiAgent";
 import {
+  packageDangerFlags,
+  parseLooseJson,
+  parsePackageReply,
+  parseScriptReply,
+  scriptDangerFlags,
+} from "@/lib/ai";
+import {
   FAMILIES,
   FAMILY_LABEL,
   slugify,
@@ -330,12 +337,116 @@ function Dashboard() {
               <ScriptForm onDone={() => setEditing(null)} />
             )}
           </div>
+        ) : editing === "import" ? (
+          <ImportCard onDone={() => setEditing(null)} />
         ) : (
-          <button className="primary" onClick={() => setEditing("new")}>
-            ＋ New {tab === "packages" ? "package" : "script"}
-          </button>
+          <div className="row">
+            <button className="primary" onClick={() => setEditing("new")}>
+              ＋ New {tab === "packages" ? "package" : "script"}
+            </button>
+            <button onClick={() => setEditing("import")}>⬆ Import JSON</button>
+          </div>
         ))}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Import JSON — accepts the desktop app's export format (extra "sshwiz" /
+// "version" keys are ignored) as well as bare portal-shaped items, then
+// prefills the normal edit form so the admin reviews before saving.
+// ---------------------------------------------------------------------------
+
+type ImportedItem =
+  | { kind: "package"; data: MarketPackage }
+  | { kind: "script"; data: MarketScript };
+
+function ImportCard({ onDone }: { onDone: () => void }) {
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const [parsed, setParsed] = useState<ImportedItem | null>(null);
+
+  function parse() {
+    setError("");
+    try {
+      const obj = parseLooseJson(text) as Record<string, unknown>;
+      if (obj.sshwiz === "package" || (obj.recipes && !obj.body)) {
+        setParsed({ kind: "package", data: parsePackageReply(text) });
+      } else if (obj.sshwiz === "script" || obj.body) {
+        setParsed({ kind: "script", data: parseScriptReply(text) });
+      } else {
+        throw new Error(
+          'Not a recognizable item — expected a script (with a "body") or a package (with "recipes").',
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setText(await file.text());
+    setError("");
+  }
+
+  if (parsed) {
+    const flags =
+      parsed.kind === "package" ? packageDangerFlags(parsed.data) : scriptDangerFlags(parsed.data);
+    return (
+      <div className="card">
+        <div className="row">
+          <span className="icon">{parsed.data.icon}</span>
+          <div className="grow">
+            <strong>{parsed.data.name}</strong>{" "}
+            <span className="muted">· imported {parsed.kind}</span>
+          </div>
+          <button onClick={() => setParsed(null)}>← Back to JSON</button>
+        </div>
+        {flags.length > 0 && (
+          <p className="error">⚠ Contains potentially dangerous commands: {flags.join(", ")}.</p>
+        )}
+        <p className="muted">
+          Review below, adjust the document ID if needed, then save — it lands as a draft you can
+          publish from the list.
+        </p>
+        {parsed.kind === "package" ? (
+          <PackageForm initial={parsed.data} onDone={onDone} />
+        ) : (
+          <ScriptForm initial={parsed.data} onDone={onDone} />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="card">
+      <h2 style={{ marginTop: 0 }}>⬆ Import JSON</h2>
+      <p className="muted">
+        Paste one script or package as JSON — the desktop app&apos;s format (with{" "}
+        <code>&quot;sshwiz&quot;</code> and <code>&quot;version&quot;</code> keys) works as-is. One
+        item per import.
+      </p>
+      <textarea
+        rows={12}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder='{"sshwiz": "script", "name": "…", "body": "…", "params": […]}'
+        spellCheck={false}
+        style={{ fontFamily: "monospace" }}
+      />
+      <div className="row" style={{ marginTop: 8 }}>
+        <input type="file" accept=".json,application/json" onChange={pickFile} className="grow" />
+      </div>
+      {error && <p className="error">{error}</p>}
+      <div className="actions">
+        <button className="primary" onClick={parse} disabled={!text.trim()}>
+          Parse &amp; review
+        </button>
+        <button onClick={onDone}>Cancel</button>
+      </div>
+    </div>
   );
 }
 
