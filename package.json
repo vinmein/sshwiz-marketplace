@@ -1,0 +1,27 @@
+{
+  "name": "sshwiz-marketplace",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "make-admin": "node scripts/make-admin.mjs"
+  },
+  "dependencies": {
+    "firebase": "^11.1.0",
+    "next": "^15.1.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "firebase-admin": "^14.3.0",
+    "typescript": "^5.7.2"
+  }
+}

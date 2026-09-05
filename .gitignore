@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+.env.local
+.firebase/
+*.tsbuildinfo
+next-env.d.ts
+
+# Service-account private keys — never commit these.
+*-firebase-adminsdk-*.json
+service-account*.json

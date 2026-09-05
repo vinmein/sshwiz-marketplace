@@ -1,0 +1,19 @@
+# Firebase App Hosting backend config for the marketplace admin portal.
+# The NEXT_PUBLIC_* values are the Firebase web-app config — public by design
+# (security is enforced by firestore.rules), so plain values are fine here.
+runConfig:
+  maxInstances: 1
+
+env:
+  - variable: NEXT_PUBLIC_FB_API_KEY
+    value: "REPLACE_WITH_WEB_API_KEY"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FB_AUTH_DOMAIN
+    value: "REPLACE_WITH_PROJECT_ID.firebaseapp.com"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FB_PROJECT_ID
+    value: "REPLACE_WITH_PROJECT_ID"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FB_APP_ID
+    value: "REPLACE_WITH_WEB_APP_ID"
+    availability: [BUILD, RUNTIME]
