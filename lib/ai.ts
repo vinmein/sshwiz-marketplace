@@ -410,6 +410,8 @@ export function parsePackageReply(text: string, fallbackFamily = "ubuntu"): Mark
     icon: typeof obj.icon === "string" && obj.icon.trim() ? obj.icon.trim() : "📦",
     recipes,
     published: false,
+    // Imported JSON may already mark the item as part of the default catalog.
+    isDefault: obj.isDefault === true || obj.default === true,
   };
 }
 
@@ -464,6 +466,8 @@ export function parseScriptReply(text: string): MarketScript {
     params: deduped,
     body,
     published: false,
+    // Imported JSON may already mark the item as part of the default catalog.
+    isDefault: obj.isDefault === true || obj.default === true,
   };
 }
 

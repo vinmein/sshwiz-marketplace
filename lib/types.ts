@@ -16,6 +16,8 @@ export interface MarketPackage {
   /** Keyed by distro family: "ubuntu" | "rhel" | "alpine". */
   recipes: Record<string, MarketRecipe>;
   published: boolean;
+  /** Part of the app's default catalog (shipped/recommended out of the box). */
+  isDefault?: boolean;
 }
 
 export interface MarketScriptParam {
@@ -37,6 +39,8 @@ export interface MarketScript {
   body: string;
   params: MarketScriptParam[];
   published: boolean;
+  /** Part of the app's default catalog (shipped/recommended out of the box). */
+  isDefault?: boolean;
 }
 
 export const FAMILIES = ["ubuntu", "rhel", "alpine"] as const;

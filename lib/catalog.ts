@@ -86,13 +86,17 @@ async function getDocById(
 
 // --- Stable API shapes ------------------------------------------------------
 
-export interface ApiPackage extends Omit<MarketPackage, "published"> {
+export interface ApiPackage extends Omit<MarketPackage, "published" | "isDefault"> {
   id: string;
+  /** True when the item is part of the default catalog. */
+  isDefault: boolean;
   updatedAt: string | null;
 }
 
-export interface ApiScript extends Omit<MarketScript, "published"> {
+export interface ApiScript extends Omit<MarketScript, "published" | "isDefault"> {
   id: string;
+  /** True when the item is part of the default catalog. */
+  isDefault: boolean;
   updatedAt: string | null;
 }
 
@@ -118,6 +122,7 @@ function mapPackage(id: string, d: Record<string, unknown>): ApiPackage {
     category: str(d.category),
     icon: str(d.icon),
     recipes,
+    isDefault: d.isDefault === true,
     updatedAt: typeof d.updatedAt === "string" ? d.updatedAt : null,
   };
 }
@@ -130,6 +135,7 @@ function mapScript(id: string, d: Record<string, unknown>): ApiScript {
     icon: str(d.icon),
     body: str(d.body),
     params: Array.isArray(d.params) ? (d.params as ApiScript["params"]) : [],
+    isDefault: d.isDefault === true,
     updatedAt: typeof d.updatedAt === "string" ? d.updatedAt : null,
   };
 }

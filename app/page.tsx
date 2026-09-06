@@ -66,16 +66,15 @@ export default function Page() {
     );
   }
 
+  if (gate === "admin" && user) return <Dashboard user={user} />;
+
   return (
-    <main>
+    <main className="auth">
       <div className="row">
         <div className="grow">
           <h1>🛒 sshwiz Marketplace Admin</h1>
           <p className="sub">Packages and scripts published here appear in the app&apos;s Market tab.</p>
         </div>
-        <Link className="pill" href="/docs">
-          📖 Authoring guide
-        </Link>
         {user && (
           <button onClick={() => signOut(auth())} title={user.email ?? undefined}>
             Sign out
@@ -86,7 +85,6 @@ export default function Page() {
       {gate === "loading" && <p className="muted">Loading…</p>}
       {gate === "signedout" && <Login />}
       {gate === "notadmin" && user && <NotAdmin user={user} />}
-      {gate === "admin" && <Dashboard />}
     </main>
   );
 }
@@ -240,12 +238,14 @@ interface ApiKeyDoc {
 
 // ---------------------------------------------------------------------------
 
-function Dashboard() {
+function Dashboard({ user }: { user: User }) {
   const [tab, setTab] = useState<"packages" | "scripts" | "ai" | "apikeys">("packages");
   const packages = useCollection<MarketPackage>("packages");
   const scripts = useCollection<MarketScript>("scripts");
   const apiKeys = useCollection<ApiKeyDoc>("apiKeys");
-  const [editing, setEditing] = useState<string | null>(null); // doc id or "new"
+  const [editing, setEditing] = useState<string | null>(null); // doc id, "new" or "import"
+  const [filter, setFilter] = useState<"all" | "published" | "draft" | "default">("all");
+  const [search, setSearch] = useState("");
   const [marketplaceKey, setMarketplaceKey] = useState("");
 
   useEffect(() => {
@@ -257,10 +257,18 @@ function Dashboard() {
     saveMarketplaceKey(key);
   }, []);
 
-  useEffect(() => setEditing(null), [tab]);
+  useEffect(() => {
+    setEditing(null);
+    setFilter("all");
+    setSearch("");
+  }, [tab]);
 
   async function togglePublished(col: string, id: string, published: boolean) {
     await updateDoc(doc(db(), col, id), { published: !published, updatedAt: serverTimestamp() });
+  }
+
+  async function toggleDefault(col: string, id: string, isDefault: boolean) {
+    await updateDoc(doc(db(), col, id), { isDefault: !isDefault, updatedAt: serverTimestamp() });
   }
 
   async function remove(col: string, id: string, name: string) {
@@ -269,85 +277,202 @@ function Dashboard() {
     if (editing === id) setEditing(null);
   }
 
-  const rows: Array<Row<MarketPackage> | Row<MarketScript>> = tab === "packages" ? packages : tab === "scripts" ? scripts : [];
+  const isCatalog = tab === "packages" || tab === "scripts";
+  const kind = tab === "packages" ? "package" : "script";
+  const rows: Array<Row<MarketPackage> | Row<MarketScript>> =
+    tab === "packages" ? packages : tab === "scripts" ? scripts : [];
+
+  const q = search.trim().toLowerCase();
+  const visible = rows.filter((r) => {
+    if (filter === "published" && !r.data.published) return false;
+    if (filter === "draft" && r.data.published) return false;
+    if (filter === "default" && !r.data.isDefault) return false;
+    if (!q) return true;
+    return [r.id, r.data.name, r.data.description].some((s) => (s ?? "").toLowerCase().includes(q));
+  });
+
+  const editingRow = editing && editing !== "new" && editing !== "import" ? rows.find((r) => r.id === editing) : undefined;
+  const title =
+    tab === "packages" ? "Packages" : tab === "scripts" ? "Scripts" : tab === "ai" ? "AI Agent" : "API Keys";
+
+  const FILTERS: Array<{ key: typeof filter; label: string }> = [
+    { key: "all", label: "All" },
+    { key: "published", label: "Published" },
+    { key: "draft", label: "Draft" },
+    { key: "default", label: "★ Default" },
+  ];
 
   return (
-    <>
-      <div className="tabs">
-        <button className={tab === "packages" ? "active" : ""} onClick={() => setTab("packages")}>
-          📦 Packages ({packages.length})
-        </button>
-        <button className={tab === "scripts" ? "active" : ""} onClick={() => setTab("scripts")}>
-          📜 Scripts ({scripts.length})
-        </button>
-        <button className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")}>
-          🤖 AI agent
-        </button>
-        <button className={tab === "apikeys" ? "active" : ""} onClick={() => setTab("apikeys")}>
-          🔑 API Keys ({apiKeys.length})
-        </button>
-      </div>
-
-      {tab === "ai" && <AiAgent />}
-
-      {tab === "apikeys" && (
-        <ApiKeysTab
-          keys={apiKeys}
-          activeKey={marketplaceKey}
-          onSetActiveKey={updateMarketplaceKey}
-        />
-      )}
-
-      {tab !== "ai" && tab !== "apikeys" && rows.map((r) => (
-        <div className="card" key={r.id}>
-          <div className="row">
-            <span className="icon">{r.data.icon || (tab === "packages" ? "📦" : "📜")}</span>
-            <div className="grow">
-              <strong>{r.data.name}</strong> <span className="muted">· {r.id}</span>
-              <div className="muted">{r.data.description}</div>
-            </div>
-            <span className={`pill ${r.data.published ? "live" : "draft"}`}>
-              {r.data.published ? "Published" : "Draft"}
-            </span>
-            <button onClick={() => togglePublished(tab, r.id, r.data.published)}>
-              {r.data.published ? "Unpublish" : "Publish"}
-            </button>
-            <button onClick={() => setEditing(editing === r.id ? null : r.id)}>
-              {editing === r.id ? "Close" : "Edit"}
-            </button>
-            <button className="danger" onClick={() => remove(tab, r.id, r.data.name)}>
-              Delete
-            </button>
-          </div>
-          {editing === r.id &&
-            (tab === "packages" ? (
-              <PackageForm id={r.id} initial={r.data as MarketPackage} onDone={() => setEditing(null)} />
-            ) : (
-              <ScriptForm id={r.id} initial={r.data as MarketScript} onDone={() => setEditing(null)} />
-            ))}
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="logo">🛒</span> sshwiz
         </div>
-      ))}
+        <nav className="side-nav">
+          <button className={tab === "packages" ? "active" : ""} onClick={() => setTab("packages")}>
+            📦 Packages <span className="count">{packages.length}</span>
+          </button>
+          <button className={tab === "scripts" ? "active" : ""} onClick={() => setTab("scripts")}>
+            📜 Scripts <span className="count">{scripts.length}</span>
+          </button>
+          <button className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")}>
+            🤖 AI Agent
+          </button>
+          <button className={tab === "apikeys" ? "active" : ""} onClick={() => setTab("apikeys")}>
+            🔑 API Keys <span className="count">{apiKeys.length}</span>
+          </button>
+        </nav>
+        <div className="side-label">Tools</div>
+        <nav className="side-nav">
+          <Link href="/docs">📖 Authoring guide</Link>
+        </nav>
+        <div className="side-user">
+          <span className="avatar">{(user.email ?? "?").slice(0, 1)}</span>
+          <div className="who">
+            <strong title={user.email ?? undefined}>{user.email}</strong>
+            <span>Admin</span>
+          </div>
+          <button onClick={() => signOut(auth())}>Sign out</button>
+        </div>
+      </aside>
 
-      {tab !== "ai" && tab !== "apikeys" &&
-        (editing === "new" ? (
-          <div className="card">
-            {tab === "packages" ? (
-              <PackageForm onDone={() => setEditing(null)} />
+      <section className="content">
+        <div className="page-head">
+          <h1>{title}</h1>
+          {isCatalog && (
+            <>
+              <button onClick={() => setEditing("import")}>⬆ Import JSON</button>
+              <button className="primary" onClick={() => setEditing("new")}>
+                ＋ New {kind}
+              </button>
+            </>
+          )}
+        </div>
+
+        {tab === "ai" && <AiAgent />}
+
+        {tab === "apikeys" && (
+          <ApiKeysTab keys={apiKeys} activeKey={marketplaceKey} onSetActiveKey={updateMarketplaceKey} />
+        )}
+
+        {isCatalog && (
+          <>
+            <div className="toolbar">
+              <div className="filter-pills">
+                {FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    className={filter === f.key ? "active" : ""}
+                    onClick={() => setFilter(f.key)}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <div className="search">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={`Search ${tab}…`}
+                />
+              </div>
+            </div>
+
+            {visible.length === 0 ? (
+              <div className="empty">
+                <div className="big">{tab === "packages" ? "📦" : "📜"}</div>
+                {rows.length === 0
+                  ? `No ${tab} yet — create one, import JSON, or use the AI agent.`
+                  : "Nothing matches the current filter."}
+              </div>
             ) : (
-              <ScriptForm onDone={() => setEditing(null)} />
+              <div className="cards-grid">
+                {visible.map((r) => (
+                  <div className="item-card" key={r.id}>
+                    <div className="item-head">
+                      <span className="item-icon">{r.data.icon || (tab === "packages" ? "📦" : "📜")}</span>
+                      <div className="title">
+                        <strong title={r.data.name}>{r.data.name}</strong>
+                        <div className="id">{r.id}</div>
+                      </div>
+                      <div className="item-badges">
+                        <span className={`pill ${r.data.published ? "live" : "draft"}`}>
+                          {r.data.published ? "Published" : "Draft"}
+                        </span>
+                        {r.data.isDefault && <span className="pill default">★ Default</span>}
+                      </div>
+                    </div>
+                    <p className="item-desc" title={r.data.description}>
+                      {r.data.description || "No description."}
+                    </p>
+                    <div className="item-foot">
+                      <button className="soft" onClick={() => setEditing(r.id)}>
+                        ⚙ Edit
+                      </button>
+                      <button
+                        onClick={() => toggleDefault(tab, r.id, r.data.isDefault ?? false)}
+                        title={r.data.isDefault ? "Remove from the default catalog" : "Mark as a default item"}
+                      >
+                        {r.data.isDefault ? "★" : "☆"} Default
+                      </button>
+                      <button onClick={() => togglePublished(tab, r.id, r.data.published)}>
+                        {r.data.published ? "Unpublish" : "Publish"}
+                      </button>
+                      <button
+                        className="danger"
+                        style={{ flex: "0 0 auto" }}
+                        onClick={() => remove(tab, r.id, r.data.name)}
+                        title="Delete"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
+          </>
+        )}
+
+        {isCatalog && editing !== null && (
+          <div
+            className="modal-overlay"
+            onClick={(e) => e.target === e.currentTarget && setEditing(null)}
+          >
+            <div className="modal">
+              <div className="modal-head">
+                <h2>
+                  {editing === "new"
+                    ? `New ${kind}`
+                    : editing === "import"
+                      ? "⬆ Import JSON"
+                      : `Edit ${editingRow?.data.name ?? editing}`}
+                </h2>
+                <button onClick={() => setEditing(null)} title="Close">
+                  ✕
+                </button>
+              </div>
+              {editing === "import" ? (
+                <ImportCard onDone={() => setEditing(null)} />
+              ) : tab === "packages" ? (
+                <PackageForm
+                  id={editingRow?.id}
+                  initial={editingRow?.data as MarketPackage | undefined}
+                  onDone={() => setEditing(null)}
+                />
+              ) : (
+                <ScriptForm
+                  id={editingRow?.id}
+                  initial={editingRow?.data as MarketScript | undefined}
+                  onDone={() => setEditing(null)}
+                />
+              )}
+            </div>
           </div>
-        ) : editing === "import" ? (
-          <ImportCard onDone={() => setEditing(null)} />
-        ) : (
-          <div className="row">
-            <button className="primary" onClick={() => setEditing("new")}>
-              ＋ New {tab === "packages" ? "package" : "script"}
-            </button>
-            <button onClick={() => setEditing("import")}>⬆ Import JSON</button>
-          </div>
-        ))}
-    </>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -395,7 +520,7 @@ function ImportCard({ onDone }: { onDone: () => void }) {
     const flags =
       parsed.kind === "package" ? packageDangerFlags(parsed.data) : scriptDangerFlags(parsed.data);
     return (
-      <div className="card">
+      <div>
         <div className="row">
           <span className="icon">{parsed.data.icon}</span>
           <div className="grow">
@@ -421,8 +546,7 @@ function ImportCard({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="card">
-      <h2 style={{ marginTop: 0 }}>⬆ Import JSON</h2>
+    <div>
       <p className="muted">
         Paste one script or package as JSON — the desktop app&apos;s format (with{" "}
         <code>&quot;sshwiz&quot;</code> and <code>&quot;version&quot;</code> keys) works as-is. One
@@ -708,6 +832,7 @@ function PackageForm({
         description: description.trim(),
         recipes: built,
         published: initial?.published ?? false,
+        isDefault: initial?.isDefault ?? false,
         updatedAt: serverTimestamp(),
       });
       onDone();
@@ -889,6 +1014,7 @@ function ScriptForm({
         body,
         params: params.map(fromParamDraft).filter((p): p is MarketScriptParam => p !== null),
         published: initial?.published ?? false,
+        isDefault: initial?.isDefault ?? false,
         updatedAt: serverTimestamp(),
       });
       onDone();

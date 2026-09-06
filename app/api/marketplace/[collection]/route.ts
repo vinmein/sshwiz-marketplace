@@ -2,8 +2,9 @@ import { apiError, apiJson, apiOptions } from "@/lib/apiResponse";
 import { validateApiKey } from "@/lib/apiAuth";
 import { catalogConfigured, listPackages, listScripts } from "@/lib/catalog";
 
-// GET /api/marketplace/packages[?family=ubuntu|rhel|alpine]
-// GET /api/marketplace/scripts
+// GET /api/marketplace/packages[?family=ubuntu|rhel|alpine][&default=true]
+// GET /api/marketplace/scripts[?default=true]
+// Every item carries isDefault; ?default=true narrows to the default catalog.
 
 export const dynamic = "force-dynamic";
 
@@ -13,16 +14,20 @@ export async function GET(req: Request, ctx: { params: Promise<{ collection: str
 
   if (!catalogConfigured) return apiError("Marketplace is not configured.", 503);
   const { collection } = await ctx.params;
+  const search = new URL(req.url).searchParams;
+  const defaultOnly = ["1", "true"].includes(search.get("default") ?? "");
   try {
     if (collection === "packages") {
-      const family = new URL(req.url).searchParams.get("family") ?? undefined;
+      const family = search.get("family") ?? undefined;
       if (family && !["ubuntu", "rhel", "alpine"].includes(family)) {
         return apiError("family must be one of: ubuntu, rhel, alpine.", 400);
       }
-      return apiJson({ packages: await listPackages(family) });
+      const packages = await listPackages(family);
+      return apiJson({ packages: defaultOnly ? packages.filter((p) => p.isDefault) : packages });
     }
     if (collection === "scripts") {
-      return apiJson({ scripts: await listScripts() });
+      const scripts = await listScripts();
+      return apiJson({ scripts: defaultOnly ? scripts.filter((s) => s.isDefault) : scripts });
     }
     return apiError("Unknown collection — use packages or scripts.", 404);
   } catch (err) {
