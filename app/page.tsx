@@ -13,8 +13,10 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { auth, db, firebaseConfigured } from "@/lib/firebase";
 import AiAgent from "./AiAgent";
+import AuthShell, { friendlyAuthError, PasswordInput } from "./AuthShell";
 import {
   packageDangerFlags,
   parseLooseJson,
@@ -69,23 +71,11 @@ export default function Page() {
   if (gate === "admin" && user) return <Dashboard user={user} />;
 
   return (
-    <main className="auth">
-      <div className="row">
-        <div className="grow">
-          <h1>🛒 sshwiz Marketplace Admin</h1>
-          <p className="sub">Packages and scripts published here appear in the app&apos;s Market tab.</p>
-        </div>
-        {user && (
-          <button onClick={() => signOut(auth())} title={user.email ?? undefined}>
-            Sign out
-          </button>
-        )}
-      </div>
-
-      {gate === "loading" && <p className="muted">Loading…</p>}
+    <AuthShell>
+      {gate === "loading" && <p className="auth-loading">Loading…</p>}
       {gate === "signedout" && <Login />}
       {gate === "notadmin" && user && <NotAdmin user={user} />}
-    </main>
+    </AuthShell>
   );
 }
 
@@ -93,39 +83,69 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       await signInWithEmailAndPassword(auth(), email, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(friendlyAuthError(err));
     } finally {
       setBusy(false);
     }
   }
 
+  async function resetPassword() {
+    if (!email.trim()) {
+      setError("Enter your email above first, then click “Forgot password?”.");
+      return;
+    }
+    setError("");
+    setNotice("");
+    try {
+      await sendPasswordResetEmail(auth(), email.trim());
+      setNotice(`Password reset email sent to ${email.trim()} — check your inbox.`);
+    } catch (err) {
+      setError(friendlyAuthError(err));
+    }
+  }
+
   return (
-    <form className="card" onSubmit={submit} style={{ maxWidth: 380 }}>
-      <h2 style={{ marginTop: 0 }}>Sign in</h2>
+    <form onSubmit={submit}>
+      <h1 className="auth-title">Welcome back</h1>
+      <p className="auth-sub">Sign in to manage the marketplace.</p>
       <label>
         Email
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          placeholder="you@example.com"
+          required
+          autoFocus
+        />
       </label>
       <label>
-        Password
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <span className="label-row">
+          Password
+          <button type="button" className="linklike" onClick={resetPassword}>
+            Forgot password?
+          </button>
+        </span>
+        <PasswordInput value={password} onChange={setPassword} autoComplete="current-password" required />
       </label>
       {error && <p className="error">{error}</p>}
-      <div className="actions">
-        <button className="primary" disabled={busy}>
-          {busy ? "Signing in…" : "Sign in"}
-        </button>
-      </div>
-      <p className="muted" style={{ marginTop: 12 }}>
+      {notice && <p className="notice">{notice}</p>}
+      <button className="primary auth-submit" disabled={busy}>
+        {busy ? "Signing in…" : "Sign in"}
+      </button>
+      <p className="auth-alt">
         No account yet? <Link href="/register">Create one</Link>
       </p>
     </form>
@@ -148,8 +168,10 @@ function NotAdmin({ user }: { user: User }) {
   }
 
   return (
-    <div className="card">
-      <p>
+    <div>
+      <div className="auth-pending">⏳</div>
+      <h1 className="auth-title">Awaiting approval</h1>
+      <p className="auth-sub">
         <strong>{user.email}</strong> is signed in but doesn&apos;t have admin access yet.
       </p>
       <p className="muted">
@@ -160,10 +182,16 @@ function NotAdmin({ user }: { user: User }) {
         <code className="grow" style={{ overflowWrap: "anywhere" }}>
           {user.uid}
         </code>
-        <button onClick={copyUid}>{copied ? "✓ Copied" : "Copy UID"}</button>
+        <button type="button" onClick={copyUid}>{copied ? "✓ Copied" : "Copy UID"}</button>
       </div>
-      <p className="muted" style={{ marginTop: 12 }}>
-        Once added, reload this page.
+      <button className="primary auth-submit" type="button" onClick={() => window.location.reload()}>
+        I&apos;ve been added — reload
+      </button>
+      <p className="auth-alt">
+        Not you?{" "}
+        <button type="button" className="linklike" onClick={() => signOut(auth())}>
+          Sign out
+        </button>
       </p>
     </div>
   );

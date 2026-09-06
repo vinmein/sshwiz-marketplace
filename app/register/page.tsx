@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, firebaseConfigured } from "@/lib/firebase";
+import AuthShell, { friendlyAuthError, PasswordInput } from "../AuthShell";
 
 /**
  * Creates the Firebase Auth account only. Admin access is a separate,
@@ -19,6 +20,8 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const mismatch = confirm.length > 0 && password !== confirm;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,29 +38,35 @@ export default function RegisterPage() {
       }
       router.push("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(friendlyAuthError(err));
       setBusy(false);
     }
   }
 
   if (!firebaseConfigured) {
     return (
-      <main>
-        <h1>Create account</h1>
-        <p className="sub">Firebase is not configured — see the README.</p>
-      </main>
+      <AuthShell>
+        <h1 className="auth-title">Create account</h1>
+        <p className="auth-sub">Firebase is not configured — see the README.</p>
+      </AuthShell>
     );
   }
 
   return (
-    <main>
-      <h1>🛒 sshwiz Marketplace Admin</h1>
-      <p className="sub">Create an account. An existing admin then has to grant you access.</p>
-      <form className="card" onSubmit={submit} style={{ maxWidth: 380 }}>
-        <h2 style={{ marginTop: 0 }}>Create account</h2>
+    <AuthShell>
+      <form onSubmit={submit}>
+        <h1 className="auth-title">Create your account</h1>
+        <p className="auth-sub">An existing admin then has to grant you access.</p>
         <label>
-          Name (optional)
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+          Name <span className="optional">(optional)</span>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            placeholder="Ada Lovelace"
+            autoFocus
+          />
         </label>
         <label>
           Email
@@ -66,40 +75,27 @@ export default function RegisterPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            placeholder="you@example.com"
             required
           />
         </label>
         <label>
-          Password (at least 6 characters)
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-            minLength={6}
-            required
-          />
+          Password <span className="optional">(at least 6 characters)</span>
+          <PasswordInput value={password} onChange={setPassword} autoComplete="new-password" minLength={6} required />
         </label>
         <label>
           Confirm password
-          <input
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            autoComplete="new-password"
-            required
-          />
+          <PasswordInput value={confirm} onChange={setConfirm} autoComplete="new-password" required />
         </label>
+        {mismatch && <p className="error">Passwords don&apos;t match.</p>}
         {error && <p className="error">{error}</p>}
-        <div className="actions">
-          <button className="primary" disabled={busy}>
-            {busy ? "Creating account…" : "Create account"}
-          </button>
-        </div>
-        <p className="muted" style={{ marginTop: 12 }}>
+        <button className="primary auth-submit" disabled={busy || mismatch}>
+          {busy ? "Creating account…" : "Create account"}
+        </button>
+        <p className="auth-alt">
           Already have an account? <Link href="/">Sign in</Link>
         </p>
       </form>
-    </main>
+    </AuthShell>
   );
 }
