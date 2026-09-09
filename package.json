@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "make-admin": "node scripts/make-admin.mjs"
+    "make-admin": "node scripts/make-admin.mjs",
+    "check-urls": "node scripts/check-public-urls.mjs"
   },
   "dependencies": {
     "firebase": "^11.1.0",

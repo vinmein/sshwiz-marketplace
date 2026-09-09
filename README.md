@@ -24,6 +24,9 @@ How the pieces fit:
   of `app/page.tsx`) until release artefacts exist.
 - **Portal (`/admin`)** — authenticated CRUD for `packages` and `scripts`
   collections, with a publish toggle per item.
+- **Support (`/support`) and Privacy (`/privacy`)** — the two public pages the
+  desktop app's store listings are required to point at (see below). Static,
+  no client JS, same palette as the landing page.
 - **Firestore** — the storage. Security rules (`firestore.rules`) let anyone
   read *published* items and let only allowlisted admins write.
 - **sshwiz desktop app** — reads published items anonymously over Firestore's
@@ -58,6 +61,45 @@ How the pieces fit:
    `--remove` revokes. Or create the doc by hand in the Firestore console
    (any content, e.g. `{ email: "…" }`). Client writes to `admins/` are
    denied by the rules, so this is the only way in — by design.
+
+## Store listing URLs (support + privacy)
+
+Every store the desktop app ships through requires a **Support URL** and a
+**Privacy Policy URL** — both mandatory, and both must resolve to a real page
+or the submission is rejected. This app serves them:
+
+```
+https://<your-domain>/support
+https://<your-domain>/privacy
+```
+
+Before submitting (and after any deploy that touches routing), check both
+against the environment you're listing:
+
+```bash
+npm run check-urls -- https://<your-domain>
+```
+
+It fails loudly on a non-200 or an empty body. With no argument it checks
+`http://localhost:3000`.
+
+Three env vars feed these pages — set them per environment in
+`apphosting.yaml` (and `.env.local` for local runs):
+
+| Variable | What it's for |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | This environment's origin, no trailing slash. Feeds canonical URLs; staging and production must differ. |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | The address shown on `/support`. Defaults to `contact@higglerslab.com`. |
+| `NEXT_PUBLIC_SECURITY_EMAIL` | Where vulnerability reports go. Defaults to the support address. |
+
+Left unset (or still `REPLACE_WITH_…`), the addresses fall back to the
+defaults in `lib/site.ts` and the canonical URL is simply omitted — the pages
+still resolve, which is what the store checks. Only `NEXT_PUBLIC_SITE_URL`
+genuinely has to be set per environment.
+
+The paths themselves are a public contract — renaming `/support` or
+`/privacy` breaks every listing already pointing at them. `PRIVACY_UPDATED`
+in `lib/site.ts` dates the policy; bump it whenever the text changes.
 
 ## Deploy the security rules
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import s from "./landing.module.css";
+import { BrandGlyph, SiteFooter } from "./SiteChrome";
 
 export const metadata: Metadata = {
   title: "sshwiz — set up a Linux server in a few clicks",
@@ -84,7 +85,7 @@ export default function LandingPage() {
       <Pro />
       <Faq />
       <Download />
-      <Footer />
+      <SiteFooter brandHref="#top" />
     </div>
   );
 }
@@ -118,21 +119,6 @@ function Nav() {
         </div>
       </div>
     </nav>
-  );
-}
-
-function BrandGlyph() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M3 4.5 6 8l-3 3.5"
-        stroke="#fff"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M8.5 11.5H13" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
   );
 }
 
@@ -719,7 +705,7 @@ function Faq() {
   ];
 
   return (
-    <section className={s.section}>
+    <section className={s.section} id="faq">
       <div className={s.container}>
         <div className={s.sectionHead}>
           <p className={s.kicker}>Questions</p>
@@ -772,27 +758,5 @@ function Download() {
         </div>
       </div>
     </section>
-  );
-}
-
-/* -------------------------------------------------------------- footer --- */
-
-function Footer() {
-  return (
-    <footer className={s.footer}>
-      <div className={`${s.container} ${s.footerInner}`}>
-        <a className={s.brand} href="#top">
-          <span className={s.brandMark}>
-            <BrandGlyph />
-          </span>
-          sshwiz
-        </a>
-        <span>© {new Date().getFullYear()} sshwiz</span>
-        <div className={s.footerRight}>
-          <Link href="/docs">Authoring guide</Link>
-          <Link href="/admin">Admin portal</Link>
-        </div>
-      </div>
-    </footer>
   );
 }

@@ -17,3 +17,17 @@ env:
   - variable: NEXT_PUBLIC_FB_APP_ID
     value: "REPLACE_WITH_WEB_APP_ID"
     availability: [BUILD, RUNTIME]
+
+  # Public site details. NEXT_PUBLIC_SITE_URL is this backend's own origin —
+  # it must differ between staging and production. The two addresses are shown
+  # on /support and /privacy, the pages the store listings point at.
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: "REPLACE_WITH_SITE_ORIGIN"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_SUPPORT_EMAIL
+    value: "contact@higglerslab.com"
+    availability: [BUILD, RUNTIME]
+  # Same inbox as support until a dedicated security address exists.
+  - variable: NEXT_PUBLIC_SECURITY_EMAIL
+    value: "contact@higglerslab.com"
+    availability: [BUILD, RUNTIME]
