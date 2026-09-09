@@ -1,1152 +1,798 @@
-"use client";
-
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  onSnapshot,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth, db, firebaseConfigured } from "@/lib/firebase";
-import AiAgent from "./AiAgent";
-import AuthShell, { friendlyAuthError, PasswordInput } from "./AuthShell";
-import {
-  packageDangerFlags,
-  parseLooseJson,
-  parsePackageReply,
-  parseScriptReply,
-  scriptDangerFlags,
-} from "@/lib/ai";
-import {
-  FAMILIES,
-  FAMILY_LABEL,
-  slugify,
-  type MarketPackage,
-  type MarketScript,
-  type MarketScriptParam,
-} from "@/lib/types";
+import s from "./landing.module.css";
 
-type Gate = "loading" | "signedout" | "notadmin" | "admin";
+export const metadata: Metadata = {
+  title: "sshwiz — set up a Linux server in a few clicks",
+  description:
+    "A desktop cockpit for your servers: encrypted SSH profiles, one-click install recipes for Docker, Nginx, Node and friends, parameterised scripts, and a live terminal that shows every command before it runs.",
+};
 
-export default function Page() {
-  const [gate, setGate] = useState<Gate>("loading");
-  const [user, setUser] = useState<User | null>(null);
+/**
+ * Public product page. Rendered as a server component with no client JS — the
+ * app screenshot below is a hand-built HTML/CSS replica of the real UI, so the
+ * page stays sharp on every display and costs nothing to load.
+ *
+ * TODO: point these at the real release artefacts once builds are published.
+ */
+const DOWNLOADS = {
+  mac: "#download",
+  linux: "#download",
+  windows: "#download",
+};
 
-  useEffect(() => {
-    if (!firebaseConfigured) return;
-    return onAuthStateChanged(auth(), async (u) => {
-      setUser(u);
-      if (!u) {
-        setGate("signedout");
-        return;
-      }
-      try {
-        const admin = await getDoc(doc(db(), "admins", u.uid));
-        setGate(admin.exists() ? "admin" : "notadmin");
-      } catch {
-        setGate("notadmin");
-      }
-    });
-  }, []);
-
-  if (!firebaseConfigured) {
-    return (
-      <main>
-        <h1>sshwiz Marketplace Admin</h1>
-        <p className="sub">
-          Firebase is not configured. Copy <code>.env.local.example</code> to{" "}
-          <code>.env.local</code> and fill in your project&apos;s web-app config, then restart.
-        </p>
-      </main>
-    );
-  }
-
-  if (gate === "admin" && user) return <Dashboard user={user} />;
-
+export default function LandingPage() {
   return (
-    <AuthShell>
-      {gate === "loading" && <p className="auth-loading">Loading…</p>}
-      {gate === "signedout" && <Login />}
-      {gate === "notadmin" && user && <NotAdmin user={user} />}
-    </AuthShell>
-  );
-}
+    <div className={s.page}>
+      <Nav />
 
-function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [busy, setBusy] = useState(false);
+      <header className={s.hero}>
+        <div className={s.container}>
+          <span className={s.eyebrow}>
+            <b>New</b> Phase 1 preview — the Shelf, Market and AI assist are live
+          </span>
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      await signInWithEmailAndPassword(auth(), email, password);
-    } catch (err) {
-      setError(friendlyAuthError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
+          <h1 className={s.h1}>
+            SSH in. Click.
+            <br />
+            <em>It&apos;s installed.</em>
+          </h1>
 
-  async function resetPassword() {
-    if (!email.trim()) {
-      setError("Enter your email above first, then click “Forgot password?”.");
-      return;
-    }
-    setError("");
-    setNotice("");
-    try {
-      await sendPasswordResetEmail(auth(), email.trim());
-      setNotice(`Password reset email sent to ${email.trim()} — check your inbox.`);
-    } catch (err) {
-      setError(friendlyAuthError(err));
-    }
-  }
+          <p className={s.lede}>
+            sshwiz turns server setup into a shelf you pick from. Save an encrypted profile, choose
+            Docker, Nginx, Certbot or a pinned Node version, read the exact commands it&apos;s about
+            to run — then watch them stream back in a live terminal. No copy-pasted gist, no
+            half-remembered <code>apt</code> incantation.
+          </p>
 
-  return (
-    <form onSubmit={submit}>
-      <h1 className="auth-title">Welcome back</h1>
-      <p className="auth-sub">Sign in to manage the marketplace.</p>
-      <label>
-        Email
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          placeholder="you@example.com"
-          required
-          autoFocus
-        />
-      </label>
-      <label>
-        <span className="label-row">
-          Password
-          <button type="button" className="linklike" onClick={resetPassword}>
-            Forgot password?
-          </button>
-        </span>
-        <PasswordInput value={password} onChange={setPassword} autoComplete="current-password" required />
-      </label>
-      {error && <p className="error">{error}</p>}
-      {notice && <p className="notice">{notice}</p>}
-      <button className="primary auth-submit" disabled={busy}>
-        {busy ? "Signing in…" : "Sign in"}
-      </button>
-      <p className="auth-alt">
-        No account yet? <Link href="/register">Create one</Link>
-      </p>
-    </form>
-  );
-}
+          <div className={s.ctaRow}>
+            <a className={`${s.btn} ${s.btnPrimary}`} href="#download">
+              Download sshwiz
+            </a>
+            <a className={`${s.btn} ${s.btnGhost}`} href="#shelf">
+              See how the Shelf works
+            </a>
+          </div>
 
-/** Signed in, but not on the `admins` allowlist. Surfaces the UID an existing
-    admin needs (registration never grants access by itself — see rules). */
-function NotAdmin({ user }: { user: User }) {
-  const [copied, setCopied] = useState(false);
+          <p className={s.microNote}>
+            Free during the Phase 1 preview · macOS, Linux and Windows · your keys never leave your
+            machine
+          </p>
 
-  async function copyUid() {
-    try {
-      await navigator.clipboard.writeText(user.uid);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard unavailable — the UID is still visible to copy by hand.
-    }
-  }
+          <AppShot />
 
-  return (
-    <div>
-      <div className="auth-pending">⏳</div>
-      <h1 className="auth-title">Awaiting approval</h1>
-      <p className="auth-sub">
-        <strong>{user.email}</strong> is signed in but doesn&apos;t have admin access yet.
-      </p>
-      <p className="muted">
-        Ask an existing admin to create a Firestore document at <code>admins/&lt;your UID&gt;</code>{" "}
-        (any content, e.g. <code>{"{ email: … }"}</code>) in the Firebase console. Your UID:
-      </p>
-      <div className="row" style={{ marginTop: 8 }}>
-        <code className="grow" style={{ overflowWrap: "anywhere" }}>
-          {user.uid}
-        </code>
-        <button type="button" onClick={copyUid}>{copied ? "✓ Copied" : "Copy UID"}</button>
-      </div>
-      <button className="primary auth-submit" type="button" onClick={() => window.location.reload()}>
-        I&apos;ve been added — reload
-      </button>
-      <p className="auth-alt">
-        Not you?{" "}
-        <button type="button" className="linklike" onClick={() => signOut(auth())}>
-          Sign out
-        </button>
-      </p>
+          <div className={s.strip}>
+            <span>
+              <b>Ubuntu / Debian</b>
+            </span>
+            <span>
+              <b>RHEL / Fedora</b>
+            </span>
+            <span>
+              <b>Alpine</b>
+            </span>
+            <span>Recipes are written per distro family — one card, three package managers.</span>
+          </div>
+        </div>
+      </header>
+
+      <Features />
+      <HowItWorks />
+      <Shelf />
+      <AiSection />
+      <Security />
+      <Pro />
+      <Faq />
+      <Download />
+      <Footer />
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
+/* ------------------------------------------------------------------ nav -- */
 
-interface Row<T> {
-  id: string;
-  data: T;
-}
-
-function useCollection<T>(name: string): Row<T>[] {
-  const [rows, setRows] = useState<Row<T>[]>([]);
-  useEffect(
-    () =>
-      onSnapshot(collection(db(), name), (snap) => {
-        setRows(
-          snap.docs
-            .map((d) => ({ id: d.id, data: d.data() as T }))
-            .sort((a, b) => a.id.localeCompare(b.id)),
-        );
-      }),
-    [name],
+function Nav() {
+  return (
+    <nav className={s.nav}>
+      <div className={`${s.container} ${s.navInner}`}>
+        <a className={s.brand} href="#top">
+          <span className={s.brandMark}>
+            <BrandGlyph />
+          </span>
+          sshwiz
+        </a>
+        <div className={s.navLinks}>
+          <a href="#features">Features</a>
+          <a href="#shelf">Shelf</a>
+          <a href="#marketplace">Marketplace</a>
+          <a href="#security">Security</a>
+          <a href="#pro">Pro</a>
+        </div>
+        <div className={s.navRight}>
+          <Link className={s.quiet} href="/docs">
+            Authoring guide
+          </Link>
+          <a className={`${s.btn} ${s.btnPrimary}`} href="#download" style={{ padding: "9px 18px" }}>
+            Download
+          </a>
+        </div>
+      </div>
+    </nav>
   );
-  return rows;
 }
 
-// ---------------------------------------------------------------------------
-// API Key helpers
-// ---------------------------------------------------------------------------
-
-const MARKETPLACE_KEY_STORE = "sshwiz-marketplace-api-key";
-
-function loadMarketplaceKey(): string {
-  try {
-    return localStorage.getItem(MARKETPLACE_KEY_STORE) ?? "";
-  } catch {
-    return "";
-  }
+function BrandGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3 4.5 6 8l-3 3.5"
+        stroke="#fff"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M8.5 11.5H13" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
 }
 
-function saveMarketplaceKey(key: string) {
-  try {
-    if (key) localStorage.setItem(MARKETPLACE_KEY_STORE, key);
-    else localStorage.removeItem(MARKETPLACE_KEY_STORE);
-  } catch {}
+/* ------------------------------------------------------- the app shot -- */
+
+const SHOT_PACKAGES: { icon: string; name: string; cat: string; desc: string }[] = [
+  {
+    icon: "🐳",
+    name: "Docker",
+    cat: "Containers",
+    desc: "Container runtime and CLI from Docker's official apt repository, including Buildx and Compose plugins.",
+  },
+  {
+    icon: "🟩",
+    name: "Node.js (specific version)",
+    cat: "Runtime",
+    desc: "Installs a pinned major of Node.js (20.x by default) with npm from the official NodeSource repository.",
+  },
+  {
+    icon: "🔐",
+    name: "Certbot",
+    cat: "Security",
+    desc: "The Let's Encrypt ACME client for obtaining and automatically renewing free TLS certificates.",
+  },
+  {
+    icon: "🌐",
+    name: "Nginx",
+    cat: "Web",
+    desc: "High-performance web server and reverse proxy.",
+  },
+];
+
+function AppShot() {
+  return (
+    <div className={s.shot}>
+      <div className={s.shotInner}>
+        <div className={s.appBar}>
+          <div className={s.dots}>
+            <span className={s.dot} style={{ background: "#ff5f57" }} />
+            <span className={s.dot} style={{ background: "#febc2e" }} />
+            <span className={s.dot} style={{ background: "#28c840" }} />
+          </div>
+          <span className={s.appTitle}>sshwiz</span>
+          <span className={s.appTag}>Phase 1 prototype</span>
+        </div>
+
+        <div className={s.appBody}>
+          <aside className={s.rail}>
+            {["VA", "GE", "MA"].map((initials) => (
+              <span className={s.avatar} key={initials}>
+                <span>{initials}</span>
+              </span>
+            ))}
+            <span className={`${s.avatar} ${s.avatarAdd}`}>
+              <span>+</span>
+            </span>
+          </aside>
+
+          <aside className={s.side}>
+            <p className={s.sideTitle}>New profile</p>
+            <p className={s.label}>Profile name</p>
+            <div className={s.input}>Staging box</div>
+            <p className={s.label}>Host</p>
+            <div className={`${s.input} ${s.inputMono}`}>203.0.113.10</div>
+            <p className={s.label}>Username</p>
+            <div className={`${s.input} ${s.inputMono}`}>ubuntu</div>
+            <p className={s.label}>Authentication</p>
+            <div className={s.seg}>
+              <span className={`${s.segItem} ${s.segOn}`}>Key file</span>
+              <span className={s.segItem}>Password</span>
+              <span className={s.segItem}>Paste key</span>
+            </div>
+            <p className={s.label}>Private key path</p>
+            <div className={`${s.input} ${s.inputMono}`}>~/.ssh/id_ed25519</div>
+            <div className={`${s.sideBtn} ${s.sideBtnStrong}`}>Connect</div>
+            <div className={s.sideBtn}>Import from ~/.ssh/config</div>
+          </aside>
+
+          <section className={s.mainPane}>
+            <div className={s.tabs}>
+              <span className={`${s.tab} ${s.tabOn}`}>📦 Shelf</span>
+              <span className={s.tab}>📊 Dashboard</span>
+              <span className={s.tab}>⚙️ Services</span>
+              <span className={`${s.tab} ${s.tabDim}`}>
+                🐳 Docker <b className={s.proTag}>PRO</b>
+              </span>
+              <span className={`${s.tab} ${s.tabDim}`}>
+                📋 Logs <b className={s.proTag}>PRO</b>
+              </span>
+              <span className={`${s.tab} ${s.tabDim}`}>
+                🛡 Security <b className={s.proTag}>PRO</b>
+              </span>
+            </div>
+
+            <div className={s.cards}>
+              {SHOT_PACKAGES.map((p) => (
+                <article className={s.pkg} key={p.name}>
+                  <span className={s.pkgBadge}>{"{ }"}</span>
+                  <div className={s.pkgHead}>
+                    <span className={s.pkgIcon}>{p.icon}</span>
+                    <div>
+                      <div className={s.pkgName}>{p.name}</div>
+                      <div className={s.pkgCat}>{p.cat}</div>
+                    </div>
+                  </div>
+                  <p className={s.pkgDesc}>{p.desc}</p>
+                </article>
+              ))}
+              <article className={`${s.pkg} ${s.pkgDashed}`}>
+                <div className={s.pkgHead}>
+                  <span className={s.pkgIcon}>➕</span>
+                  <div>
+                    <div className={s.pkgName}>Custom recipe</div>
+                    <div className={s.pkgCat}>Your own shelf item</div>
+                  </div>
+                </div>
+                <p className={s.pkgDesc}>Define check / install / verify once and reuse it anywhere.</p>
+              </article>
+              <article className={`${s.pkg} ${s.pkgDashed}`}>
+                <div className={s.pkgHead}>
+                  <span className={s.pkgIcon}>📥</span>
+                  <div>
+                    <div className={s.pkgName}>Import JSON</div>
+                    <div className={s.pkgCat}>Paste an exported entry</div>
+                  </div>
+                </div>
+                <p className={s.pkgDesc}>Share recipes with the team using the {"{ }"} badge on any card.</p>
+              </article>
+            </div>
+
+            <div className={s.review}>
+              <div className={s.reviewHead}>Install review · 9 commands</div>
+              <div className={s.reviewBox}>
+                <b>$</b> curl -fsSL https://download.docker.com/linux/ubuntu/gpg | …
+                <br />
+                <b>$</b> sudo apt-get install -y docker-ce docker-compose-plugin
+                <br />
+                <b>$</b> docker --version
+              </div>
+              <div className={s.reviewBtns}>
+                <span className={s.installBtn}>Install</span>
+                <span className={s.targetsBtn}>Targets · 3 servers</span>
+              </div>
+            </div>
+          </section>
+
+          <aside className={s.term}>
+            <div className={s.termHead}>
+              <span className={s.pulse} />
+              Terminal
+            </div>
+            <div className={s.termBody}>
+              <span className={s.dim}>ubuntu@staging:~$ </span>
+              <span className={s.cmd}>docker --version</span>
+              {"\n"}Docker version 27.3.1, build ce12230
+              {"\n"}
+              {"\n"}
+              <span className={s.ok}>✓ check</span> docker not present
+              {"\n"}
+              <span className={s.ok}>✓ install</span> 9/9 commands ok
+              {"\n"}
+              <span className={s.ok}>✓ verify</span> daemon responding
+              {"\n"}
+              {"\n"}
+              <span className={s.dim}>ubuntu@staging:~$ </span>
+              <span className={s.caret} />
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-async function sha256(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+/* ------------------------------------------------------------- features -- */
+
+const FEATURES = [
+  {
+    icon: "🔐",
+    title: "Profiles that stay yours",
+    body: (
+      <>
+        Hosts, keys and passphrases live in a single AES-256-GCM file on your machine, with the
+        encryption key held in the OS keychain. The profile stores the <em>path</em> to your key, not
+        a copy of it — and <code>~/.ssh/config</code> imports in one click.
+      </>
+    ),
+  },
+  {
+    icon: "📦",
+    title: "A shelf, not a wiki page",
+    body: (
+      <>
+        Docker, Nginx, Certbot, MongoDB, git, pinned Node.js and Python versions. Every recipe is
+        the same three steps — <code>check</code>, <code>install</code>, <code>verify</code> — so a
+        second run is a no-op instead of a disaster.
+      </>
+    ),
+  },
+  {
+    icon: "🧾",
+    title: "Read it before it runs",
+    body: (
+      <>
+        The install review lists every command, in order, for the exact box you&apos;re pointed at.
+        Nothing touches the server until you press Install — then the output streams back live.
+      </>
+    ),
+  },
+  {
+    icon: "🎯",
+    title: "One click, whole fleet",
+    body: (
+      <>
+        Pick your targets and send the same shelf to every server you&apos;ve saved. Staging and
+        production stop drifting apart because they were built from the same list.
+      </>
+    ),
+  },
+  {
+    icon: "📜",
+    title: "Scripts with real inputs",
+    body: (
+      <>
+        Turn a shell script into a form: labelled fields, selects, defaults, and secret values that
+        arrive as shell variables instead of sitting in your history.
+      </>
+    ),
+  },
+  {
+    icon: "🛒",
+    title: "A marketplace of recipes",
+    body: (
+      <>
+        The Market tab lists everything published to the catalog. Copy an item into your local Shelf
+        and it keeps working offline — installed content is yours, not a remote lookup.
+      </>
+    ),
+  },
+];
+
+function Features() {
+  return (
+    <section className={s.section} id="features">
+      <div className={s.container}>
+        <div className={`${s.sectionHead} ${s.centered}`}>
+          <p className={s.kicker}>What you get</p>
+          <h2 className={s.h2}>Everything between “fresh VPS” and “it&apos;s running”</h2>
+          <p className={s.sub}>
+            The boring, error-prone middle of server setup — done once, properly, and reusable.
+          </p>
+        </div>
+        <div className={s.grid3}>
+          {FEATURES.map((f) => (
+            <article className={s.card} key={f.title}>
+              <span className={s.cardIcon}>{f.icon}</span>
+              <h3 className={s.cardTitle}>{f.title}</h3>
+              <p className={s.cardBody}>{f.body}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }
 
-function generateRawKey(): string {
-  const bytes = new Uint8Array(20);
-  crypto.getRandomValues(bytes);
-  return "mk_" + Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+/* ---------------------------------------------------------- how it works -- */
 
-interface ApiKeyDoc {
-  name: string;
-  keyHash: string;
-  keyPrefix: string;
-  enabled: boolean;
-  createdAt: unknown;
-  lastUsedAt: unknown;
-}
-
-// ---------------------------------------------------------------------------
-
-function Dashboard({ user }: { user: User }) {
-  const [tab, setTab] = useState<"packages" | "scripts" | "ai" | "apikeys">("packages");
-  const packages = useCollection<MarketPackage>("packages");
-  const scripts = useCollection<MarketScript>("scripts");
-  const apiKeys = useCollection<ApiKeyDoc>("apiKeys");
-  const [editing, setEditing] = useState<string | null>(null); // doc id, "new" or "import"
-  const [filter, setFilter] = useState<"all" | "published" | "draft" | "default">("all");
-  const [search, setSearch] = useState("");
-  const [marketplaceKey, setMarketplaceKey] = useState("");
-
-  useEffect(() => {
-    setMarketplaceKey(loadMarketplaceKey());
-  }, []);
-
-  const updateMarketplaceKey = useCallback((key: string) => {
-    setMarketplaceKey(key);
-    saveMarketplaceKey(key);
-  }, []);
-
-  useEffect(() => {
-    setEditing(null);
-    setFilter("all");
-    setSearch("");
-  }, [tab]);
-
-  async function togglePublished(col: string, id: string, published: boolean) {
-    await updateDoc(doc(db(), col, id), { published: !published, updatedAt: serverTimestamp() });
-  }
-
-  async function toggleDefault(col: string, id: string, isDefault: boolean) {
-    await updateDoc(doc(db(), col, id), { isDefault: !isDefault, updatedAt: serverTimestamp() });
-  }
-
-  async function remove(col: string, id: string, name: string) {
-    if (!window.confirm(`Delete "${name}" from the marketplace? This cannot be undone.`)) return;
-    await deleteDoc(doc(db(), col, id));
-    if (editing === id) setEditing(null);
-  }
-
-  const isCatalog = tab === "packages" || tab === "scripts";
-  const kind = tab === "packages" ? "package" : "script";
-  const rows: Array<Row<MarketPackage> | Row<MarketScript>> =
-    tab === "packages" ? packages : tab === "scripts" ? scripts : [];
-
-  const q = search.trim().toLowerCase();
-  const visible = rows.filter((r) => {
-    if (filter === "published" && !r.data.published) return false;
-    if (filter === "draft" && r.data.published) return false;
-    if (filter === "default" && !r.data.isDefault) return false;
-    if (!q) return true;
-    return [r.id, r.data.name, r.data.description].some((s) => (s ?? "").toLowerCase().includes(q));
-  });
-
-  const editingRow = editing && editing !== "new" && editing !== "import" ? rows.find((r) => r.id === editing) : undefined;
-  const title =
-    tab === "packages" ? "Packages" : tab === "scripts" ? "Scripts" : tab === "ai" ? "AI Agent" : "API Keys";
-
-  const FILTERS: Array<{ key: typeof filter; label: string }> = [
-    { key: "all", label: "All" },
-    { key: "published", label: "Published" },
-    { key: "draft", label: "Draft" },
-    { key: "default", label: "★ Default" },
+function HowItWorks() {
+  const steps = [
+    {
+      title: "Connect",
+      body: (
+        <>
+          Add a profile — key file, password or a pasted key — or import your whole{" "}
+          <code>~/.ssh/config</code>. The sudo password is optional, and when you set one it&apos;s
+          fed over stdin, never on a command line where <code>ps</code> could read it.
+        </>
+      ),
+    },
+    {
+      title: "Fill the shelf",
+      body: (
+        <>
+          Tick the packages and scripts you want. Pull more from the Market tab, write your own with
+          Custom recipe, or paste one a teammate exported as JSON.
+        </>
+      ),
+    },
+    {
+      title: "Install and watch",
+      body: (
+        <>
+          Read the install review, choose your targets, press Install. Every line of output — checks,
+          installs, verifications — streams into the terminal panel as it happens.
+        </>
+      ),
+    },
   ];
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="logo">🛒</span> sshwiz
+    <section className={s.section}>
+      <div className={s.container}>
+        <div className={`${s.sectionHead} ${s.centered}`}>
+          <p className={s.kicker}>How it works</p>
+          <h2 className={s.h2}>Three steps, and none of them are “paste this into your shell”</h2>
         </div>
-        <nav className="side-nav">
-          <button className={tab === "packages" ? "active" : ""} onClick={() => setTab("packages")}>
-            📦 Packages <span className="count">{packages.length}</span>
-          </button>
-          <button className={tab === "scripts" ? "active" : ""} onClick={() => setTab("scripts")}>
-            📜 Scripts <span className="count">{scripts.length}</span>
-          </button>
-          <button className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")}>
-            🤖 AI Agent
-          </button>
-          <button className={tab === "apikeys" ? "active" : ""} onClick={() => setTab("apikeys")}>
-            🔑 API Keys <span className="count">{apiKeys.length}</span>
-          </button>
-        </nav>
-        <div className="side-label">Tools</div>
-        <nav className="side-nav">
-          <Link href="/docs">📖 Authoring guide</Link>
-        </nav>
-        <div className="side-user">
-          <span className="avatar">{(user.email ?? "?").slice(0, 1)}</span>
-          <div className="who">
-            <strong title={user.email ?? undefined}>{user.email}</strong>
-            <span>Admin</span>
-          </div>
-          <button onClick={() => signOut(auth())}>Sign out</button>
+        <div className={s.steps}>
+          {steps.map((step, i) => (
+            <article className={s.step} key={step.title}>
+              <span className={s.stepNum}>{i + 1}</span>
+              <h3 className={s.cardTitle}>{step.title}</h3>
+              <p className={s.cardBody}>{step.body}</p>
+            </article>
+          ))}
         </div>
-      </aside>
-
-      <section className="content">
-        <div className="page-head">
-          <h1>{title}</h1>
-          {isCatalog && (
-            <>
-              <button onClick={() => setEditing("import")}>⬆ Import JSON</button>
-              <button className="primary" onClick={() => setEditing("new")}>
-                ＋ New {kind}
-              </button>
-            </>
-          )}
-        </div>
-
-        {tab === "ai" && <AiAgent />}
-
-        {tab === "apikeys" && (
-          <ApiKeysTab keys={apiKeys} activeKey={marketplaceKey} onSetActiveKey={updateMarketplaceKey} />
-        )}
-
-        {isCatalog && (
-          <>
-            <div className="toolbar">
-              <div className="filter-pills">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    className={filter === f.key ? "active" : ""}
-                    onClick={() => setFilter(f.key)}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-              <div className="search">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={`Search ${tab}…`}
-                />
-              </div>
-            </div>
-
-            {visible.length === 0 ? (
-              <div className="empty">
-                <div className="big">{tab === "packages" ? "📦" : "📜"}</div>
-                {rows.length === 0
-                  ? `No ${tab} yet — create one, import JSON, or use the AI agent.`
-                  : "Nothing matches the current filter."}
-              </div>
-            ) : (
-              <div className="cards-grid">
-                {visible.map((r) => (
-                  <div className="item-card" key={r.id}>
-                    <div className="item-head">
-                      <span className="item-icon">{r.data.icon || (tab === "packages" ? "📦" : "📜")}</span>
-                      <div className="title">
-                        <strong title={r.data.name}>{r.data.name}</strong>
-                        <div className="id">{r.id}</div>
-                      </div>
-                      <div className="item-badges">
-                        <span className={`pill ${r.data.published ? "live" : "draft"}`}>
-                          {r.data.published ? "Published" : "Draft"}
-                        </span>
-                        {r.data.isDefault && <span className="pill default">★ Default</span>}
-                      </div>
-                    </div>
-                    <p className="item-desc" title={r.data.description}>
-                      {r.data.description || "No description."}
-                    </p>
-                    <div className="item-foot">
-                      <button className="soft" onClick={() => setEditing(r.id)}>
-                        ⚙ Edit
-                      </button>
-                      <button
-                        onClick={() => toggleDefault(tab, r.id, r.data.isDefault ?? false)}
-                        title={r.data.isDefault ? "Remove from the default catalog" : "Mark as a default item"}
-                      >
-                        {r.data.isDefault ? "★" : "☆"} Default
-                      </button>
-                      <button onClick={() => togglePublished(tab, r.id, r.data.published)}>
-                        {r.data.published ? "Unpublish" : "Publish"}
-                      </button>
-                      <button
-                        className="danger"
-                        style={{ flex: "0 0 auto" }}
-                        onClick={() => remove(tab, r.id, r.data.name)}
-                        title="Delete"
-                      >
-                        🗑
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {isCatalog && editing !== null && (
-          <div
-            className="modal-overlay"
-            onClick={(e) => e.target === e.currentTarget && setEditing(null)}
-          >
-            <div className="modal">
-              <div className="modal-head">
-                <h2>
-                  {editing === "new"
-                    ? `New ${kind}`
-                    : editing === "import"
-                      ? "⬆ Import JSON"
-                      : `Edit ${editingRow?.data.name ?? editing}`}
-                </h2>
-                <button onClick={() => setEditing(null)} title="Close">
-                  ✕
-                </button>
-              </div>
-              {editing === "import" ? (
-                <ImportCard onDone={() => setEditing(null)} />
-              ) : tab === "packages" ? (
-                <PackageForm
-                  id={editingRow?.id}
-                  initial={editingRow?.data as MarketPackage | undefined}
-                  onDone={() => setEditing(null)}
-                />
-              ) : (
-                <ScriptForm
-                  id={editingRow?.id}
-                  initial={editingRow?.data as MarketScript | undefined}
-                  onDone={() => setEditing(null)}
-                />
-              )}
-            </div>
-          </div>
-        )}
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Import JSON — accepts the desktop app's export format (extra "sshwiz" /
-// "version" keys are ignored) as well as bare portal-shaped items, then
-// prefills the normal edit form so the admin reviews before saving.
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------- shelf -- */
 
-type ImportedItem =
-  | { kind: "package"; data: MarketPackage }
-  | { kind: "script"; data: MarketScript };
-
-function ImportCard({ onDone }: { onDone: () => void }) {
-  const [text, setText] = useState("");
-  const [error, setError] = useState("");
-  const [parsed, setParsed] = useState<ImportedItem | null>(null);
-
-  function parse() {
-    setError("");
-    try {
-      const obj = parseLooseJson(text) as Record<string, unknown>;
-      if (obj.sshwiz === "package" || (obj.recipes && !obj.body)) {
-        setParsed({ kind: "package", data: parsePackageReply(text) });
-      } else if (obj.sshwiz === "script" || obj.body) {
-        setParsed({ kind: "script", data: parseScriptReply(text) });
-      } else {
-        throw new Error(
-          'Not a recognizable item — expected a script (with a "body") or a package (with "recipes").',
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  async function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setText(await file.text());
-    setError("");
-  }
-
-  if (parsed) {
-    const flags =
-      parsed.kind === "package" ? packageDangerFlags(parsed.data) : scriptDangerFlags(parsed.data);
-    return (
-      <div>
-        <div className="row">
-          <span className="icon">{parsed.data.icon}</span>
-          <div className="grow">
-            <strong>{parsed.data.name}</strong>{" "}
-            <span className="muted">· imported {parsed.kind}</span>
-          </div>
-          <button onClick={() => setParsed(null)}>← Back to JSON</button>
-        </div>
-        {flags.length > 0 && (
-          <p className="error">⚠ Contains potentially dangerous commands: {flags.join(", ")}.</p>
-        )}
-        <p className="muted">
-          Review below, adjust the document ID if needed, then save — it lands as a draft you can
-          publish from the list.
-        </p>
-        {parsed.kind === "package" ? (
-          <PackageForm initial={parsed.data} onDone={onDone} />
-        ) : (
-          <ScriptForm initial={parsed.data} onDone={onDone} />
-        )}
-      </div>
-    );
-  }
-
+function Shelf() {
   return (
-    <div>
-      <p className="muted">
-        Paste one script or package as JSON — the desktop app&apos;s format (with{" "}
-        <code>&quot;sshwiz&quot;</code> and <code>&quot;version&quot;</code> keys) works as-is. One
-        item per import.
-      </p>
-      <textarea
-        rows={12}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder='{"sshwiz": "script", "name": "…", "body": "…", "params": […]}'
-        spellCheck={false}
-        style={{ fontFamily: "monospace" }}
-      />
-      <div className="row" style={{ marginTop: 8 }}>
-        <input type="file" accept=".json,application/json" onChange={pickFile} className="grow" />
-      </div>
-      {error && <p className="error">{error}</p>}
-      <div className="actions">
-        <button className="primary" onClick={parse} disabled={!text.trim()}>
-          Parse &amp; review
-        </button>
-        <button onClick={onDone}>Cancel</button>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// API Keys tab
-// ---------------------------------------------------------------------------
-
-function ApiKeysTab({
-  keys,
-  activeKey,
-  onSetActiveKey,
-}: {
-  keys: Row<ApiKeyDoc>[];
-  activeKey: string;
-  onSetActiveKey: (key: string) => void;
-}) {
-  const [newKeyName, setNewKeyName] = useState("");
-  const [createdKey, setCreatedKey] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  async function createKey() {
-    const name = newKeyName.trim();
-    if (!name) {
-      setError("Give the key a descriptive name.");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    setCreatedKey(null);
-    try {
-      const rawKey = generateRawKey();
-      const keyHash = await sha256(rawKey);
-      const keyPrefix = rawKey.slice(0, 11) + "…";
-      const id = slugify(name) || `key-${Date.now()}`;
-      await setDoc(doc(db(), "apiKeys", id), {
-        name,
-        keyHash,
-        keyPrefix,
-        enabled: true,
-        createdAt: serverTimestamp(),
-        lastUsedAt: null,
-      });
-      setCreatedKey(rawKey);
-      setNewKeyName("");
-      // Auto-set as active key in this browser if none is set.
-      if (!activeKey) onSetActiveKey(rawKey);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function toggleEnabled(id: string, enabled: boolean) {
-    await updateDoc(doc(db(), "apiKeys", id), { enabled: !enabled });
-  }
-
-  async function deleteKey(id: string, name: string) {
-    if (!window.confirm(`Delete API key "${name}"? Clients using this key will lose access.`)) return;
-    await deleteDoc(doc(db(), "apiKeys", id));
-  }
-
-  async function copyKey(key: string) {
-    try {
-      await navigator.clipboard.writeText(key);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
-  }
-
-  const formatTs = (v: unknown) => {
-    if (!v || typeof v !== "object") return "—";
-    const ts = v as { seconds?: number; toDate?: () => Date };
-    if (ts.toDate) return ts.toDate().toLocaleString();
-    if (ts.seconds) return new Date(ts.seconds * 1000).toLocaleString();
-    return "—";
-  };
-
-  return (
-    <div>
-      <p className="muted">
-        API keys authenticate requests to all <code>/api/*</code> endpoints. Create a key here, then
-        include it in your requests as <code>Authorization: Bearer mk_…</code> or{" "}
-        <code>x-api-key: mk_…</code>.
-      </p>
-
-      {/* Active key for this browser */}
-      <div className="card">
-        <h2 style={{ marginTop: 0 }}>🖥️ This browser&apos;s active key</h2>
-        <p className="muted">
-          Stored in localStorage — used automatically for AI agent requests from this admin portal.
-        </p>
-        <div className="row">
-          <input
-            type="password"
-            className="grow"
-            value={activeKey}
-            onChange={(e) => onSetActiveKey(e.target.value)}
-            placeholder="Paste a marketplace API key here (mk_…)"
-            style={{ fontFamily: "monospace" }}
-          />
-          {activeKey && (
-            <button className="danger" onClick={() => onSetActiveKey("")}>
-              Clear
-            </button>
-          )}
-        </div>
-        {activeKey && (
-          <p className="muted" style={{ marginTop: 4 }}>
-            ✓ Key set ({activeKey.slice(0, 11)}…)
-          </p>
-        )}
-      </div>
-
-      {/* Create new key */}
-      <div className="card">
-        <h2 style={{ marginTop: 0 }}>Create a new API key</h2>
-        <div className="row">
-          <input
-            type="text"
-            className="grow"
-            value={newKeyName}
-            onChange={(e) => setNewKeyName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && createKey()}
-            placeholder='Descriptive name, e.g. "Production Desktop App"'
-          />
-          <button className="primary" onClick={createKey} disabled={busy}>
-            {busy ? "Creating…" : "Create key"}
-          </button>
-        </div>
-        {error && <p className="error">{error}</p>}
-        {createdKey && (
-          <div style={{ marginTop: 12, padding: 12, background: "var(--bg-card, #1a1a2e)", borderRadius: 8, border: "1px solid #4ecca3" }}>
-            <p>
-              <strong>🔑 Copy your API key now — it won&apos;t be shown again:</strong>
+    <section className={s.section} id="shelf">
+      <div className={s.container}>
+        <div className={s.split}>
+          <div>
+            <p className={s.kicker}>The shelf</p>
+            <h2 className={s.h2}>One card. Every package manager.</h2>
+            <p className={s.sub}>
+              A recipe carries a separate command list per distro family, so the card you click is
+              the same whether the box underneath is Ubuntu, Fedora or Alpine.
             </p>
-            <div className="row">
-              <code className="grow" style={{ overflowWrap: "anywhere", fontSize: 13 }}>
-                {createdKey}
+            <ul className={s.list}>
+              <li>
+                <b>check</b> — is it already there? Skip the work instead of fighting it.
+              </li>
+              <li>
+                <b>install</b> — the real commands, from official repositories, in order.
+              </li>
+              <li>
+                <b>verify</b> — prove it actually came up before you call it done.
+              </li>
+              <li>
+                <b>{"{ }"} export</b> — every card round-trips to JSON for sharing and review.
+              </li>
+            </ul>
+          </div>
+          <div className={s.code}>
+            <div className={s.codeBar}>docker · recipes.ubuntu</div>
+            <pre>
+              <code>
+                {`{
+  `}
+                <span className={s.k}>&quot;check&quot;</span>
+                {`:   [`}
+                <span className={s.s}>&quot;command -v docker&quot;</span>
+                {`],
+  `}
+                <span className={s.k}>&quot;install&quot;</span>
+                {`: [
+    `}
+                <span className={s.s}>&quot;sudo install -m 0755 -d /etc/apt/keyrings&quot;</span>
+                {`,
+    `}
+                <span className={s.s}>&quot;sudo apt-get update -y&quot;</span>
+                {`,
+    `}
+                <span className={s.s}>&quot;sudo apt-get install -y docker-ce …&quot;</span>
+                {`
+  ],
+  `}
+                <span className={s.k}>&quot;verify&quot;</span>
+                {`:  [`}
+                <span className={s.s}>&quot;docker --version&quot;</span>
+                {`]
+}`}
               </code>
-              <button onClick={() => copyKey(createdKey)}>
-                {copied ? "✓ Copied" : "Copy"}
-              </button>
-              <button onClick={() => { onSetActiveKey(createdKey); }}>
-                Use in this browser
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Key list */}
-      {keys.length === 0 ? (
-        <p className="muted">No API keys yet. Create one above.</p>
-      ) : (
-        keys.map((k) => (
-          <div className="card" key={k.id}>
-            <div className="row">
-              <div className="grow">
-                <strong>{k.data.name}</strong>{" "}
-                <span className="muted">· {k.data.keyPrefix}</span>
-                <div className="muted" style={{ fontSize: 12 }}>
-                  Created: {formatTs(k.data.createdAt)} · Last used: {formatTs(k.data.lastUsedAt)}
-                </div>
-              </div>
-              <span className={`pill ${k.data.enabled ? "live" : "draft"}`}>
-                {k.data.enabled ? "Active" : "Disabled"}
-              </span>
-              <button onClick={() => toggleEnabled(k.id, k.data.enabled)}>
-                {k.data.enabled ? "Disable" : "Enable"}
-              </button>
-              <button className="danger" onClick={() => deleteKey(k.id, k.data.name)}>
-                Delete
-              </button>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-const splitLines = (s: string) => s.split("\n").map((l) => l.trim()).filter(Boolean);
-
-function PackageForm({
-  id,
-  initial,
-  onDone,
-}: {
-  id?: string;
-  initial?: MarketPackage;
-  onDone: () => void;
-}) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [icon, setIcon] = useState(initial?.icon ?? "📦");
-  const [category, setCategory] = useState(initial?.category ?? "Marketplace");
-  const [description, setDescription] = useState(initial?.description ?? "");
-  const [docId, setDocId] = useState(id ?? "");
-  // One set of commands + a family selector, like the desktop app's editor:
-  // "all" writes the same commands to every family; a specific family edits
-  // just that family and leaves the others in the document untouched.
-  const initialFamily = (() => {
-    if (!initial) return "all";
-    const present = FAMILIES.filter((f) => initial.recipes?.[f]);
-    if (present.length === FAMILIES.length) {
-      const dumps = present.map((f) => JSON.stringify(initial.recipes[f]));
-      if (dumps.every((d) => d === dumps[0])) return "all";
-    }
-    return present[0] ?? "all";
-  })();
-  const recipeText = (fam: string) => {
-    const r = initial?.recipes?.[fam === "all" ? "ubuntu" : fam];
-    return {
-      check: r?.check.join("\n") ?? "",
-      install: r?.install.join("\n") ?? "",
-      verify: r?.verify.join("\n") ?? "",
-    };
-  };
-  const [family, setFamily] = useState<string>(initialFamily);
-  const [cmds, setCmds] = useState(() => recipeText(initialFamily));
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const finalId = id ?? (docId.trim() || slugify(name));
-  const otherFamilies = FAMILIES.filter(
-    (f) => initial?.recipes?.[f] && f !== family && family !== "all",
-  );
-
-  function switchFamily(f: string) {
-    setFamily(f);
-    setCmds(recipeText(f));
-  }
-
-  async function save() {
-    if (!name.trim() || !finalId || !cmds.install.trim()) {
-      setError("A name and install commands are required.");
-      return;
-    }
-    const recipe = {
-      check: splitLines(cmds.check),
-      install: splitLines(cmds.install),
-      verify: splitLines(cmds.verify),
-    };
-    const built: MarketPackage["recipes"] =
-      family === "all"
-        ? Object.fromEntries(FAMILIES.map((f) => [f, recipe]))
-        : { ...(initial?.recipes ?? {}), [family]: recipe };
-    setBusy(true);
-    setError("");
-    try {
-      await setDoc(doc(db(), "packages", finalId), {
-        name: name.trim(),
-        icon: icon.trim() || "📦",
-        category: category.trim() || "Marketplace",
-        description: description.trim(),
-        recipes: built,
-        published: initial?.published ?? false,
-        isDefault: initial?.isDefault ?? false,
-        updatedAt: serverTimestamp(),
-      });
-      onDone();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div>
-      <div className="grid2">
-        <label>
-          Name
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          Icon (emoji)
-          <input type="text" value={icon} onChange={(e) => setIcon(e.target.value)} />
-        </label>
-        <label>
-          Category
-          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} />
-        </label>
-        <label>
-          Document ID {id ? "(fixed)" : ""}
-          <input
-            type="text"
-            value={finalId}
-            disabled={Boolean(id)}
-            onChange={(e) => setDocId(e.target.value)}
-          />
-        </label>
-      </div>
-      <div className="grid2">
-        <label>
-          Description
-          <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
-        </label>
-        <label>
-          Distro family
-          <select value={family} onChange={(e) => switchFamily(e.target.value)}>
-            <option value="all">All (same commands)</option>
-            {FAMILIES.map((f) => (
-              <option key={f} value={f}>
-                {FAMILY_LABEL[f]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {otherFamilies.length > 0 && (
-        <p className="muted">
-          This package also has recipes for {otherFamilies.map((f) => FAMILY_LABEL[f]).join(", ")} —
-          they stay unchanged; you&apos;re editing {FAMILY_LABEL[family]} only.
-        </p>
-      )}
-      <label>
-        Check commands (one per line — exit 0 = already installed)
-        <textarea
-          rows={2}
-          value={cmds.check}
-          onChange={(e) => setCmds({ ...cmds, check: e.target.value })}
-        />
-      </label>
-      <label>
-        Install commands (one per line)
-        <textarea
-          rows={3}
-          value={cmds.install}
-          onChange={(e) => setCmds({ ...cmds, install: e.target.value })}
-        />
-      </label>
-      <label>
-        Verify commands (one per line)
-        <textarea
-          rows={2}
-          value={cmds.verify}
-          onChange={(e) => setCmds({ ...cmds, verify: e.target.value })}
-        />
-      </label>
-      {error && <p className="error">{error}</p>}
-      <div className="actions">
-        <button className="primary" onClick={save} disabled={busy}>
-          {busy ? "Saving…" : "Save package"}
-        </button>
-        <button onClick={onDone}>Cancel</button>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-interface ParamDraft {
-  shellVar: string;
-  label: string;
-  placeholder: string;
-  default: string;
-  required: boolean;
-  secret: boolean;
-  /** One "value|Label" per line; non-empty = a select input. */
-  choices: string;
-}
-
-function toParamDraft(p: MarketScriptParam): ParamDraft {
-  return {
-    shellVar: p.shellVar,
-    label: p.label,
-    placeholder: p.placeholder ?? "",
-    default: p.default ?? "",
-    required: p.required ?? false,
-    secret: p.secret ?? false,
-    choices: (p.options ?? []).map((o) => (o.label !== o.value ? `${o.value}|${o.label}` : o.value)).join("\n"),
-  };
-}
-
-function fromParamDraft(d: ParamDraft): MarketScriptParam | null {
-  const shellVar = d.shellVar.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "_");
-  if (!shellVar) return null;
-  const options = splitLines(d.choices).map((line) => {
-    const [value, label] = line.split("|");
-    return { value: value.trim(), label: (label ?? value).trim() };
-  });
-  const param: MarketScriptParam = {
-    key: shellVar.toLowerCase(),
-    shellVar,
-    label: d.label.trim() || shellVar,
-    required: d.required,
-  };
-  if (d.placeholder.trim()) param.placeholder = d.placeholder.trim();
-  if (d.default.trim()) param.default = d.default.trim();
-  if (d.secret) param.secret = true;
-  if (options.length > 0) {
-    param.type = "select";
-    param.options = options;
-  }
-  return param;
-}
-
-function ScriptForm({
-  id,
-  initial,
-  onDone,
-}: {
-  id?: string;
-  initial?: MarketScript;
-  onDone: () => void;
-}) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [icon, setIcon] = useState(initial?.icon ?? "📜");
-  const [description, setDescription] = useState(initial?.description ?? "");
-  const [docId, setDocId] = useState(id ?? "");
-  const [body, setBody] = useState(initial?.body ?? "");
-  const [params, setParams] = useState<ParamDraft[]>(() => (initial?.params ?? []).map(toParamDraft));
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const finalId = id ?? (docId.trim() || slugify(name));
-  const undeclared = useMemo(() => {
-    const declared = new Set(params.map((p) => p.shellVar.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "_")));
-    const refs = [...body.matchAll(/\$\{?([A-Z][A-Z0-9_]*)\b/g)].map((m) => m[1]);
-    return [...new Set(refs.filter((r) => !declared.has(r)))];
-  }, [body, params]);
-
-  async function save() {
-    if (!name.trim() || !finalId || !body.trim()) {
-      setError("Name and script body are required.");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      await setDoc(doc(db(), "scripts", finalId), {
-        name: name.trim(),
-        icon: icon.trim() || "📜",
-        description: description.trim(),
-        body,
-        params: params.map(fromParamDraft).filter((p): p is MarketScriptParam => p !== null),
-        published: initial?.published ?? false,
-        isDefault: initial?.isDefault ?? false,
-        updatedAt: serverTimestamp(),
-      });
-      onDone();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function updateParam(i: number, patch: Partial<ParamDraft>) {
-    setParams(params.map((p, j) => (j === i ? { ...p, ...patch } : p)));
-  }
-
-  return (
-    <div>
-      <div className="grid2">
-        <label>
-          Name
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          Icon (emoji)
-          <input type="text" value={icon} onChange={(e) => setIcon(e.target.value)} />
-        </label>
-      </div>
-      <label>
-        Description
-        <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
-      </label>
-      <label>
-        Document ID {id ? "(fixed)" : ""}
-        <input type="text" value={finalId} disabled={Boolean(id)} onChange={(e) => setDocId(e.target.value)} />
-      </label>
-
-      <h2>Inputs</h2>
-      {params.map((p, i) => (
-        <div className="card" key={i}>
-          <div className="grid2">
-            <label>
-              Shell variable
-              <input type="text" value={p.shellVar} onChange={(e) => updateParam(i, { shellVar: e.target.value })} />
-            </label>
-            <label>
-              Label
-              <input type="text" value={p.label} onChange={(e) => updateParam(i, { label: e.target.value })} />
-            </label>
-            <label>
-              Placeholder
-              <input type="text" value={p.placeholder} onChange={(e) => updateParam(i, { placeholder: e.target.value })} />
-            </label>
-            <label>
-              Default
-              <input type="text" value={p.default} onChange={(e) => updateParam(i, { default: e.target.value })} />
-            </label>
-          </div>
-          <label>
-            Choices (optional; one per line as value|Label — makes this a dropdown)
-            <textarea rows={2} value={p.choices} onChange={(e) => updateParam(i, { choices: e.target.value })} />
-          </label>
-          <div className="row">
-            <label className="checkbox">
-              <input type="checkbox" checked={p.required} onChange={(e) => updateParam(i, { required: e.target.checked })} />
-              Required
-            </label>
-            <label className="checkbox">
-              <input type="checkbox" checked={p.secret} onChange={(e) => updateParam(i, { secret: e.target.checked })} />
-              Secret
-            </label>
-            <div className="grow" />
-            <button className="danger" onClick={() => setParams(params.filter((_, j) => j !== i))}>
-              Remove
-            </button>
+            </pre>
           </div>
         </div>
-      ))}
-      <button
-        onClick={() =>
-          setParams([
-            ...params,
-            { shellVar: "", label: "", placeholder: "", default: "", required: false, secret: false, choices: "" },
-          ])
-        }
-      >
-        ＋ Add input
-      </button>
-
-      <label>
-        Script body (runs with set -e over SSH; reference inputs as $VAR)
-        <textarea rows={10} value={body} onChange={(e) => setBody(e.target.value)} spellCheck={false} />
-      </label>
-      {undeclared.length > 0 && (
-        <p className="error">
-          The body references {undeclared.map((v) => `$${v}`).join(", ")} but no input declares{" "}
-          {undeclared.length === 1 ? "it" : "them"} — add matching inputs or fix the body.
-        </p>
-      )}
-      {error && <p className="error">{error}</p>}
-      <div className="actions">
-        <button className="primary" onClick={save} disabled={busy}>
-          {busy ? "Saving…" : "Save script"}
-        </button>
-        <button onClick={onDone}>Cancel</button>
       </div>
-    </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ AI --- */
+
+function AiSection() {
+  return (
+    <section className={s.section} id="marketplace">
+      <div className={s.container}>
+        <div className={s.split}>
+          <div className={s.code}>
+            <div className={s.codeBar}>curl · the published catalog</div>
+            <pre>
+              <code>
+                <span className={s.c}>{"# everything published, as JSON\n"}</span>
+                {'curl -H "Authorization: Bearer $SSHWIZ_KEY" \\\n  '}
+                <span className={s.s}>https://sshwiz.app/api/marketplace</span>
+                {"\n\n"}
+                <span className={s.c}>{"# just the Ubuntu/Debian packages\n"}</span>
+                {'curl -H "Authorization: Bearer $SSHWIZ_KEY" \\\n  '}
+                <span className={s.s}>
+                  https://sshwiz.app/api/marketplace/packages?family=ubuntu
+                </span>
+                {"\n\n"}
+                <span className={s.c}>{"# one script by id\n"}</span>
+                {'curl -H "Authorization: Bearer $SSHWIZ_KEY" \\\n  '}
+                <span className={s.s}>https://sshwiz.app/api/marketplace/scripts/harden-ssh</span>
+              </code>
+            </pre>
+          </div>
+          <div>
+            <p className={s.kicker}>Marketplace &amp; AI assist</p>
+            <h2 className={s.h2}>Describe it in English. Get a recipe.</h2>
+            <p className={s.sub}>
+              The AI assist panel&apos;s Recipe mode drafts the check / install / verify commands for
+              whatever you ask for, per distro family, ready to review and edit before it ever runs.
+            </p>
+            <ul className={s.list}>
+              <li>
+                <b>Bring your own key</b> — Anthropic, OpenAI, or any OpenAI-compatible endpoint,
+                including a local Ollama at <code>localhost:11434</code>.
+              </li>
+              <li>
+                <b>Your key stays local.</b> It lives in your own storage, never in the catalog.
+              </li>
+              <li>
+                <b>Drafts stay drafts.</b> Generated items save unpublished until a human reviews
+                them.
+              </li>
+              <li>
+                <b>Scriptable catalog.</b> The published shelf is also a read-only JSON API, keyed
+                per client and rate limited — point your own tooling at it.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------ security --- */
+
+function Security() {
+  return (
+    <section className={s.section} id="security">
+      <div className={s.container}>
+        <div className={`${s.sectionHead} ${s.centered}`}>
+          <p className={s.kicker}>Trust</p>
+          <h2 className={s.h2}>Your servers, your credentials, your machine</h2>
+          <p className={s.sub}>
+            sshwiz is a desktop app that speaks SSH directly. There is no relay, no agent to install
+            on the server, and nothing to sync.
+          </p>
+        </div>
+        <div className={s.grid3}>
+          <article className={s.card}>
+            <span className={s.cardIcon}>🗝</span>
+            <h3 className={s.cardTitle}>Encrypted at rest</h3>
+            <p className={s.cardBody}>
+              Profiles are stored in a local AES-256-GCM file. The encryption key never leaves the OS
+              keychain.
+            </p>
+          </article>
+          <article className={s.card}>
+            <span className={s.cardIcon}>🤫</span>
+            <h3 className={s.cardTitle}>Sudo over stdin</h3>
+            <p className={s.cardBody}>
+              The sudo password is piped to <code>sudo -S</code> — never interpolated into a command
+              line, never in shell history, never visible to <code>ps</code>.
+            </p>
+          </article>
+          <article className={s.card}>
+            <span className={s.cardIcon}>👀</span>
+            <h3 className={s.cardTitle}>Nothing runs unseen</h3>
+            <p className={s.cardBody}>
+              Every command is listed in the install review first, and every byte of output comes
+              back to the terminal panel. No hidden steps.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------------- pro --- */
+
+const PRO_TABS = [
+  { icon: "📊", name: "Dashboard", note: "Load, memory, disk and uptime at a glance" },
+  { icon: "⚙️", name: "Services", note: "systemd units — start, stop, restart, enable" },
+  { icon: "🐳", name: "Docker", note: "Containers, images and logs without the CLI" },
+  { icon: "📋", name: "Logs", note: "Tail and search journald and file logs live" },
+  { icon: "📁", name: "Files", note: "Browse, edit and transfer over the same session" },
+  { icon: "🛡", name: "Security", note: "Firewall, SSH hardening and update posture" },
+];
+
+function Pro() {
+  return (
+    <section className={s.section} id="pro">
+      <div className={s.container}>
+        <div className={`${s.sectionHead} ${s.centered}`}>
+          <p className={s.kicker}>Coming with Pro</p>
+          <h2 className={s.h2}>The rest of the cockpit</h2>
+          <p className={s.sub}>
+            Provisioning is step one. These tabs turn the same connection into day-two operations —
+            in preview now, and included for everyone who joins during Phase 1.
+          </p>
+        </div>
+        <div className={s.proGrid}>
+          {PRO_TABS.map((t) => (
+            <div className={s.proItem} key={t.name}>
+              <span>{t.icon}</span>
+              <span>
+                <b>{t.name}</b>
+                <small>{t.note}</small>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------------- faq --- */
+
+function Faq() {
+  const items: { q: string; a: React.ReactNode }[] = [
+    {
+      q: "Does sshwiz install anything on my server?",
+      a: (
+        <>
+          No. It opens a normal SSH session and runs the same commands you would have typed. There is
+          no daemon, no agent and nothing left behind — uninstalling sshwiz changes nothing on the
+          box.
+        </>
+      ),
+    },
+    {
+      q: "Where do my SSH keys and passwords live?",
+      a: (
+        <>
+          On your machine only. Profiles are written to a local file encrypted with AES-256-GCM whose
+          key sits in the OS keychain, and a key-file profile stores the path — your private key
+          stays where it already was.
+        </>
+      ),
+    },
+    {
+      q: "What happens if I install the same package twice?",
+      a: (
+        <>
+          Nothing bad. Every recipe starts with a <code>check</code> step; if the package is already
+          there, the install is skipped and the verify step still confirms it&apos;s healthy.
+        </>
+      ),
+    },
+    {
+      q: "Can I use my own recipes and share them?",
+      a: (
+        <>
+          Yes — write one with Custom recipe, then use the <code>{"{ }"}</code> badge on any card to
+          export it as JSON. Teammates paste it straight into their own Shelf, or you can publish it
+          to the marketplace for everyone. The{" "}
+          <Link href="/docs">authoring guide</Link> covers what makes a good one.
+        </>
+      ),
+    },
+    {
+      q: "Which AI models does the assist panel use?",
+      a: (
+        <>
+          Whichever you bring. It speaks to Anthropic, OpenAI, or any OpenAI-compatible endpoint —
+          including a local Ollama instance if you would rather nothing left the building.
+        </>
+      ),
+    },
+  ];
+
+  return (
+    <section className={s.section}>
+      <div className={s.container}>
+        <div className={s.sectionHead}>
+          <p className={s.kicker}>Questions</p>
+          <h2 className={s.h2}>The things people ask first</h2>
+        </div>
+        <div className={s.faq}>
+          {items.map((item) => (
+            <details key={item.q}>
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------ download --- */
+
+function Download() {
+  return (
+    <section id="download">
+      <div className={s.container}>
+        <div className={s.cta}>
+          <p className={s.kicker}>Get started</p>
+          <h2 className={s.h2}>Your next server, set up before the coffee cools</h2>
+          <p className={s.sub} style={{ maxWidth: "54ch", margin: "14px auto 0" }}>
+            Free through the Phase 1 preview. Install it, point it at a box you were going to set up
+            by hand anyway, and see how far the shelf gets you.
+          </p>
+          <div className={s.platforms}>
+            <a className={s.platform} href={DOWNLOADS.mac}>
+              🍎 macOS <small>Apple silicon &amp; Intel</small>
+            </a>
+            <a className={s.platform} href={DOWNLOADS.linux}>
+              🐧 Linux <small>AppImage &amp; .deb</small>
+            </a>
+            <a className={s.platform} href={DOWNLOADS.windows}>
+              🪟 Windows <small>x64 installer</small>
+            </a>
+          </div>
+          <p className={s.microNote}>
+            Prefer to look around first? Read the{" "}
+            <Link href="/docs" style={{ color: "inherit" }}>
+              authoring guide
+            </Link>{" "}
+            to see exactly what a recipe is made of.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------- footer --- */
+
+function Footer() {
+  return (
+    <footer className={s.footer}>
+      <div className={`${s.container} ${s.footerInner}`}>
+        <a className={s.brand} href="#top">
+          <span className={s.brandMark}>
+            <BrandGlyph />
+          </span>
+          sshwiz
+        </a>
+        <span>© {new Date().getFullYear()} sshwiz</span>
+        <div className={s.footerRight}>
+          <Link href="/docs">Authoring guide</Link>
+          <Link href="/admin">Admin portal</Link>
+        </div>
+      </div>
+    </footer>
   );
 }

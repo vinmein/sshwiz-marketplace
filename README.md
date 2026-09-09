@@ -18,7 +18,11 @@ directly. Generated items always save as unpublished drafts for review.
 
 How the pieces fit:
 
-- **Portal (this app)** — authenticated CRUD for `packages` and `scripts`
+- **Landing page (`/`)** — the public product page for sshwiz. Static, no
+  client JS; styles live in `app/landing.module.css` so they can't leak into
+  the portal's theme. Download links are placeholders (`DOWNLOADS` at the top
+  of `app/page.tsx`) until release artefacts exist.
+- **Portal (`/admin`)** — authenticated CRUD for `packages` and `scripts`
   collections, with a publish toggle per item.
 - **Firestore** — the storage. Security rules (`firestore.rules`) let anyone
   read *published* items and let only allowlisted admins write.
@@ -69,7 +73,8 @@ firebase deploy --only firestore:rules
 ```bash
 cp .env.local.example .env.local   # fill in the web-app config from step 4
 npm install
-npm run dev                        # http://localhost:3000
+npm run dev                        # http://localhost:3000 → landing page
+                                   # http://localhost:3000/admin → portal
 ```
 
 ## Deploy the portal to App Hosting

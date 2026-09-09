@@ -17,7 +17,7 @@ export default function DocsPage() {
   return (
     <main className="docs">
       <p>
-        <Link href="/">← Back to the dashboard</Link>
+        <Link href="/admin">← Back to the dashboard</Link>
       </p>
       <Markdown remarkPlugins={[remarkGfm]}>{source}</Markdown>
     </main>

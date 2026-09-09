@@ -36,7 +36,7 @@ export default function RegisterPage() {
       if (name.trim()) {
         await updateProfile(cred.user, { displayName: name.trim() }).catch(() => {});
       }
-      router.push("/");
+      router.push("/admin");
     } catch (err) {
       setError(friendlyAuthError(err));
       setBusy(false);
@@ -93,7 +93,7 @@ export default function RegisterPage() {
           {busy ? "Creating account…" : "Create account"}
         </button>
         <p className="auth-alt">
-          Already have an account? <Link href="/">Sign in</Link>
+          Already have an account? <Link href="/admin">Sign in</Link>
         </p>
       </form>
     </AuthShell>
