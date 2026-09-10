@@ -1,12 +1,122 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import s from "./landing.module.css";
+import JsonLd from "./JsonLd";
 import { BrandGlyph, SiteFooter } from "./SiteChrome";
+import { LANDING_UPDATED, SITE_NAME, SITE_URL } from "@/lib/site";
+
+// The title deliberately repeats the H1 ("SSH in. Click. It's installed.") so
+// the two agree on the page's topic, then adds the search phrase.
+const TITLE = "sshwiz: SSH in, click, it's installed — Linux server setup";
+const DESCRIPTION =
+  "A desktop cockpit for your servers: encrypted SSH profiles, one-click recipes for Docker, Nginx and Node, and a live terminal that shows every command first.";
 
 export const metadata: Metadata = {
-  title: "sshwiz — set up a Linux server in a few clicks",
-  description:
-    "A desktop cockpit for your servers: encrypted SSH profiles, one-click install recipes for Docker, Nginx, Node and friends, parameterised scripts, and a live terminal that shows every command before it runs.",
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
+  alternates: {
+    canonical: "/",
+    languages: { en: "/", "x-default": "/" },
+  },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: "/",
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+};
+
+/** Structured data for the product, the FAQ and the breadcrumb trail. The FAQ
+    entries are the same strings the <details> blocks render, kept in one place
+    so the markup and the schema can't drift apart. */
+const FAQ: { q: string; a: string }[] = [
+  {
+    q: "Does sshwiz install anything on my server?",
+    a: "No. It opens a normal SSH session and runs the same commands you would have typed. There is no daemon, no agent and nothing left behind — uninstalling sshwiz changes nothing on the box.",
+  },
+  {
+    q: "Where do my SSH keys and passwords live?",
+    a: "On your machine only. Profiles are written to a local file encrypted with AES-256-GCM whose key sits in the OS keychain, and a key-file profile stores the path — your private key stays where it already was.",
+  },
+  {
+    q: "What happens if I install the same package twice?",
+    a: "Nothing bad. Every recipe starts with a check step; if the package is already there, the install is skipped and the verify step still confirms it's healthy.",
+  },
+  {
+    q: "Can I use my own recipes and share them?",
+    a: "Yes — write one with Custom recipe, then use the { } badge on any card to export it as JSON. Teammates paste it straight into their own Shelf, or you can publish it to the marketplace for everyone. The authoring guide covers what makes a good one.",
+  },
+  {
+    q: "Which AI models does the assist panel use?",
+    a: "Whichever you bring. It speaks to Anthropic, OpenAI, or any OpenAI-compatible endpoint — including a local Ollama instance if you would rather nothing left the building.",
+  },
+  {
+    q: "How is sshwiz different from Ansible or a shell script?",
+    a: "Ansible and scripts are the right tool for a fleet you rebuild often, but they need a playbook, an inventory and a runner before the first package lands. sshwiz is for the box you were about to set up by hand: connect, tick, install — and every recipe still exports as plain JSON you can read.",
+  },
+];
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": `${SITE_URL}/#app`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      description: DESCRIPTION,
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "macOS, Linux, Windows",
+      softwareVersion: "0.2 (Phase 1 preview)",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free during the Phase 1 preview" },
+      author: { "@id": `${SITE_URL}/#organization` },
+      publisher: { "@id": `${SITE_URL}/#organization` },
+      image: `${SITE_URL}/opengraph-image`,
+      featureList: [
+        "Encrypted SSH profiles (AES-256-GCM, key in the OS keychain)",
+        "One-click install recipes for Docker, Nginx, Certbot, Node.js, Python and more",
+        "Install review that lists every command before it runs",
+        "Live terminal output",
+        "Parameterised scripts with form inputs",
+        "Recipe marketplace and JSON export",
+        "AI assist with your own API key",
+      ],
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${SITE_URL}/#webpage`,
+      url: SITE_URL,
+      name: TITLE,
+      description: DESCRIPTION,
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+      about: { "@id": `${SITE_URL}/#app` },
+      author: { "@id": `${SITE_URL}/#organization` },
+      publisher: { "@id": `${SITE_URL}/#organization` },
+      datePublished: "2026-09-01",
+      dateModified: LANDING_UPDATED,
+      inLanguage: "en",
+      primaryImageOfPage: `${SITE_URL}/opengraph-image`,
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: SITE_URL }],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: FAQ.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  ],
 };
 
 /**
@@ -25,6 +135,7 @@ const DOWNLOADS = {
 export default function LandingPage() {
   return (
     <div className={s.page}>
+      <JsonLd data={structuredData} />
       <Nav />
 
       <header className={s.hero}>
@@ -77,14 +188,18 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <Features />
-      <HowItWorks />
-      <Shelf />
-      <AiSection />
-      <Security />
-      <Pro />
-      <Faq />
-      <Download />
+      <main id="main">
+        <Takeaways />
+        <Features />
+        <HowItWorks />
+        <Shelf />
+        <AiSection />
+        <Security />
+        <Compare />
+        <Pro />
+        <Faq />
+        <Download />
+      </main>
       <SiteFooter brandHref="#top" />
     </div>
   );
@@ -293,6 +408,44 @@ function AppShot() {
   );
 }
 
+/* ------------------------------------------------------------ takeaways -- */
+
+function Takeaways() {
+  return (
+    <section className={s.section} id="takeaways" aria-labelledby="takeaways-title">
+      <div className={s.container}>
+        <div className={s.takeaways}>
+          <p className={s.kicker} id="takeaways-title">
+            Key takeaways
+          </p>
+          <ol>
+            <li>
+              <b>sshwiz is a desktop app</b> for macOS, Linux and Windows that sets up a Linux server
+              over a normal SSH connection. Nothing is installed on the server itself.
+            </li>
+            <li>
+              <b>Install recipes are a shelf, not a script.</b> Each one is three steps — check,
+              install, verify — with a command list per distro family, so it is safe to run twice.
+            </li>
+            <li>
+              <b>Every command is shown before it runs</b>, and all output streams back into a live
+              terminal. Consequently, there are no hidden steps.
+            </li>
+            <li>
+              <b>Credentials never leave your machine.</b> Profiles sit in an AES-256-GCM encrypted
+              file whose key lives in the OS keychain.
+            </li>
+            <li>
+              <b>Free during the Phase 1 preview</b>, with the Pro tabs included for everyone who
+              joins now.
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------- features -- */
 
 const FEATURES = [
@@ -303,7 +456,11 @@ const FEATURES = [
       <>
         Hosts, keys and passphrases live in a single AES-256-GCM file on your machine, with the
         encryption key held in the OS keychain. The profile stores the <em>path</em> to your key, not
-        a copy of it — and <code>~/.ssh/config</code> imports in one click.
+        a copy of it — and your{" "}
+        <a href="https://man.openbsd.org/ssh_config" rel="noopener noreferrer">
+          <code>~/.ssh/config</code>
+        </a>{" "}
+        imports in one click.
       </>
     ),
   },
@@ -312,8 +469,11 @@ const FEATURES = [
     title: "A shelf, not a wiki page",
     body: (
       <>
-        Docker, Nginx, Certbot, MongoDB, git, pinned Node.js and Python versions. Every recipe is
-        the same three steps — <code>check</code>, <code>install</code>, <code>verify</code> — so a
+        <a href="https://docs.docker.com/engine/install/" rel="noopener noreferrer">Docker</a>,{" "}
+        <a href="https://nginx.org/en/docs/" rel="noopener noreferrer">Nginx</a>,{" "}
+        <a href="https://certbot.eff.org/" rel="noopener noreferrer">Certbot</a>, MongoDB, git, pinned{" "}
+        <a href="https://github.com/nodesource/distributions" rel="noopener noreferrer">Node.js</a>{" "}
+        and Python versions. Every recipe is the same three steps — <code>check</code>, <code>install</code>, <code>verify</code> — so a
         second run is a no-op instead of a disaster.
       </>
     ),
@@ -454,20 +614,23 @@ function Shelf() {
               A recipe carries a separate command list per distro family, so the card you click is
               the same whether the box underneath is Ubuntu, Fedora or Alpine.
             </p>
-            <ul className={s.list}>
-              <li>
-                <b>check</b> — is it already there? Skip the work instead of fighting it.
-              </li>
-              <li>
-                <b>install</b> — the real commands, from official repositories, in order.
-              </li>
-              <li>
-                <b>verify</b> — prove it actually came up before you call it done.
-              </li>
-              <li>
-                <b>{"{ }"} export</b> — every card round-trips to JSON for sharing and review.
-              </li>
-            </ul>
+            <dl className={s.defs}>
+              <dt>check</dt>
+              <dd>Is it already there? Skip the work instead of fighting it.</dd>
+              <dt>install</dt>
+              <dd>
+                The real commands, from official repositories, in order — for example, Docker comes
+                from{" "}
+                <a href="https://docs.docker.com/engine/install/ubuntu/" rel="noopener noreferrer">
+                  Docker&apos;s own apt repository
+                </a>
+                , not a distro snapshot.
+              </dd>
+              <dt>verify</dt>
+              <dd>Prove it actually came up before you call it done.</dd>
+              <dt>{"{ }"} export</dt>
+              <dd>Every card round-trips to JSON for sharing and review.</dd>
+            </dl>
           </div>
           <div className={s.code}>
             <div className={s.codeBar}>docker · recipes.ubuntu</div>
@@ -543,8 +706,12 @@ function AiSection() {
             </p>
             <ul className={s.list}>
               <li>
-                <b>Bring your own key</b> — Anthropic, OpenAI, or any OpenAI-compatible endpoint,
-                including a local Ollama at <code>localhost:11434</code>.
+                <b>Bring your own key</b> —{" "}
+                <a href="https://docs.anthropic.com/" rel="noopener noreferrer">Anthropic</a>,{" "}
+                <a href="https://platform.openai.com/docs" rel="noopener noreferrer">OpenAI</a>, or
+                any OpenAI-compatible endpoint, including a local{" "}
+                <a href="https://ollama.com/" rel="noopener noreferrer">Ollama</a> at{" "}
+                <code>localhost:11434</code>.
               </li>
               <li>
                 <b>Your key stays local.</b> It lives in your own storage, never in the catalog.
@@ -592,8 +759,12 @@ function Security() {
             <span className={s.cardIcon}>🤫</span>
             <h3 className={s.cardTitle}>Sudo over stdin</h3>
             <p className={s.cardBody}>
-              The sudo password is piped to <code>sudo -S</code> — never interpolated into a command
-              line, never in shell history, never visible to <code>ps</code>.
+              The sudo password is piped to{" "}
+              <a href="https://www.sudo.ws/docs/man/sudo.man/#S" rel="noopener noreferrer">
+                <code>sudo -S</code>
+              </a>{" "}
+              — never interpolated into a command line, never in shell history, never visible to{" "}
+              <code>ps</code>.
             </p>
           </article>
           <article className={s.card}>
@@ -604,6 +775,89 @@ function Security() {
               back to the terminal panel. No hidden steps.
             </p>
           </article>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- compare --- */
+
+const COMPARE_ROWS: { what: string; manual: string; config: string; sshwiz: string }[] = [
+  {
+    what: "Time to first package on a fresh box",
+    manual: "Minutes, if you remember the commands",
+    config: "Hours: playbook, inventory, runner",
+    sshwiz: "Under a minute: connect, tick, Install",
+  },
+  {
+    what: "See the commands before they run",
+    manual: "Only if you wrote them down",
+    config: "Dry-run mode, in the tool's own DSL",
+    sshwiz: "Always — the install review lists every line",
+  },
+  {
+    what: "Safe to run twice",
+    manual: "Depends on the script",
+    config: "Yes, by design",
+    sshwiz: "Yes — the check step skips what's already there",
+  },
+  {
+    what: "Anything installed on the server",
+    manual: "No",
+    config: "Usually a Python runtime or an agent",
+    sshwiz: "No — plain SSH, nothing left behind",
+  },
+  {
+    what: "Where credentials live",
+    manual: "Shell history and ~/.ssh",
+    config: "Vault files, CI secrets",
+    sshwiz: "An encrypted local file, key in the OS keychain",
+  },
+  {
+    what: "Best for",
+    manual: "One-off boxes you know well",
+    config: "Fleets you rebuild from code",
+    sshwiz: "The one to twenty servers you set up by hand",
+  },
+];
+
+function Compare() {
+  return (
+    <section className={s.section} id="compare" aria-labelledby="compare-title">
+      <div className={s.container}>
+        <div className={`${s.sectionHead} ${s.centered}`}>
+          <p className={s.kicker}>Compared</p>
+          <h2 className={s.h2} id="compare-title">
+            sshwiz vs. doing it by hand vs. configuration management
+          </h2>
+          <p className={s.sub}>
+            To be fair, each of these is the right answer somewhere. On the other hand, most servers
+            are still set up by someone pasting commands from a gist — that is the gap sshwiz fills.
+          </p>
+        </div>
+        <div className={s.tableWrap}>
+          <table className={s.table}>
+            <caption>How sshwiz compares with a manual SSH session and with tools like Ansible</caption>
+            <thead>
+              <tr>
+                <th scope="col">&nbsp;</th>
+                <th scope="col">By hand over SSH</th>
+                <th scope="col">Ansible, Puppet, Chef</th>
+                <th scope="col">sshwiz</th>
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARE_ROWS.map((r) => (
+                <tr key={r.what}>
+                  <th scope="row">{r.what}</th>
+                  <td>{r.manual}</td>
+                  <td>{r.config}</td>
+                  <td>{r.sshwiz}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -702,6 +956,17 @@ function Faq() {
         </>
       ),
     },
+    {
+      q: "How is sshwiz different from Ansible or a shell script?",
+      a: (
+        <>
+          Ansible and scripts are the right tool for a fleet you rebuild often, but they need a
+          playbook, an inventory and a runner before the first package lands. sshwiz is for the box
+          you were about to set up by hand: connect, tick, install — and every recipe still exports
+          as plain JSON you can read. See the <a href="#compare">comparison</a> above.
+        </>
+      ),
+    },
   ];
 
   return (
@@ -710,6 +975,17 @@ function Faq() {
         <div className={s.sectionHead}>
           <p className={s.kicker}>Questions</p>
           <h2 className={s.h2}>The things people ask first</h2>
+          <p className={s.sub}>
+            Answers last reviewed on{" "}
+            <time dateTime={LANDING_UPDATED}>
+              {new Date(LANDING_UPDATED).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </time>
+            . Something missing? <Link href="/support">Ask us</Link> and it goes in here.
+          </p>
         </div>
         <div className={s.faq}>
           {items.map((item) => (
@@ -731,11 +1007,13 @@ function Download() {
     <section id="download">
       <div className={s.container}>
         <div className={s.cta}>
-          <p className={s.kicker}>Get started</p>
+          <p className={s.kicker}>In short</p>
           <h2 className={s.h2}>Your next server, set up before the coffee cools</h2>
           <p className={s.sub} style={{ maxWidth: "54ch", margin: "14px auto 0" }}>
-            Free through the Phase 1 preview. Install it, point it at a box you were going to set up
-            by hand anyway, and see how far the shelf gets you.
+            Our recommendation: if you set up servers by hand more than once a month, sshwiz will
+            pay for the download in the first session. It is free through the Phase 1 preview, so
+            install it, point it at a box you were going to set up by hand anyway, and see how far
+            the shelf gets you.
           </p>
           <div className={s.platforms}>
             <a className={s.platform} href={DOWNLOADS.mac}>

@@ -951,3 +951,22 @@ code {
     padding: 20px 16px 60px;
   }
 }
+
+/* Keyboard users can jump straight past the nav. Visible only when focused. */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  z-index: 1000;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #1a2036;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 16px;
+  outline: 2px solid #93a4ff;
+}

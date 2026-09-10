@@ -15,7 +15,7 @@ export const dynamic = "force-static";
 export default function DocsPage() {
   const source = readFileSync(join(process.cwd(), "AUTHORING.md"), "utf8");
   return (
-    <main className="docs">
+    <main className="docs" id="main">
       <p>
         <Link href="/admin">← Back to the dashboard</Link>
       </p>

@@ -8,7 +8,10 @@
 // fails review. Run this against staging before submitting, and after any
 // deploy that touches routing.
 
-const PATHS = ["/support", "/privacy"];
+// The first two are the store-listing URLs; the rest are what search engines
+// and link previews fetch. Small files have a lower size floor.
+const PATHS = ["/support", "/privacy", "/terms", "/about"];
+const SMALL = ["/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/icon.svg", "/opengraph-image"];
 
 const base = (process.argv.slice(2).find((a) => !a.startsWith("--")) ??
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -16,19 +19,20 @@ const base = (process.argv.slice(2).find((a) => !a.startsWith("--")) ??
 
 let failed = false;
 
-for (const path of PATHS) {
+for (const path of [...PATHS, ...SMALL]) {
   const url = `${base}${path}`;
+  const floor = SMALL.includes(path) ? 20 : 500;
   try {
     const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(15_000) });
-    const body = await res.text();
+    const body = await res.arrayBuffer();
     if (!res.ok) {
       console.error(`✘ ${url} — HTTP ${res.status}`);
       failed = true;
-    } else if (body.length < 500) {
-      console.error(`✘ ${url} — HTTP 200 but the page is empty (${body.length} bytes)`);
+    } else if (body.byteLength < floor) {
+      console.error(`✘ ${url} — HTTP 200 but the page is empty (${body.byteLength} bytes)`);
       failed = true;
     } else {
-      console.log(`✔ ${url} — HTTP ${res.status}, ${body.length} bytes`);
+      console.log(`✔ ${url} — HTTP ${res.status}, ${body.byteLength} bytes`);
     }
   } catch (err) {
     console.error(`✘ ${url} — ${err?.message ?? err}`);

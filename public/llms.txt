@@ -1,0 +1,20 @@
+# sshwiz
+
+> sshwiz is a desktop app (macOS, Linux, Windows) that sets up a Linux server in a few clicks: save an encrypted SSH profile, pick install recipes for Docker, Nginx, Certbot, Node.js and more from a shelf, read every command before it runs, then watch the output stream back in a live terminal. Made by Higglerslab.
+
+## Pages
+
+- [Home](https://sshwiz.com/): features, how it works, security model, FAQ and downloads
+- [Authoring guide](https://sshwiz.com/docs): how to write packages and scripts for the marketplace
+- [About](https://sshwiz.com/about): who makes sshwiz and why
+- [Support](https://sshwiz.com/support): how to get help and report security issues
+- [Privacy policy](https://sshwiz.com/privacy)
+- [Terms of service](https://sshwiz.com/terms)
+
+## Key facts
+
+- Nothing is installed on the server: sshwiz opens a normal SSH session and runs the same commands you would type.
+- SSH profiles are stored locally in an AES-256-GCM encrypted file; the key lives in the OS keychain.
+- Every recipe has three steps — check, install, verify — so a second run is a no-op.
+- Recipes carry separate command lists per distro family (Ubuntu/Debian, RHEL/Fedora, Alpine).
+- Free during the Phase 1 preview.

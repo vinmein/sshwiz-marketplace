@@ -1,6 +1,6 @@
 import Link from "next/link";
 import s from "./landing.module.css";
-import { PRIVACY_PATH, SUPPORT_PATH } from "@/lib/site";
+import { ABOUT_PATH, PRIVACY_PATH, SUPPORT_EMAIL, SUPPORT_PATH, TERMS_PATH } from "@/lib/site";
 
 /** The wordmark's chevron. Shared by the landing page and the legal pages. */
 export function BrandGlyph() {
@@ -19,7 +19,8 @@ export function BrandGlyph() {
 }
 
 /** Footer shared by every public page. Carries the Support and Privacy links
-    that the store listings point at, so they're reachable from anywhere. */
+    that the store listings point at, plus About, Contact and Terms — the
+    trust links crawlers look for — so they're reachable from anywhere. */
 export function SiteFooter({ brandHref = "/" }: { brandHref?: string }) {
   return (
     <footer className={s.footer}>
@@ -30,10 +31,13 @@ export function SiteFooter({ brandHref = "/" }: { brandHref?: string }) {
           </span>
           sshwiz
         </a>
-        <span>© {new Date().getFullYear()} sshwiz</span>
+        <span>© {new Date().getFullYear()} sshwiz · made by Higglerslab</span>
         <div className={s.footerRight}>
+          <Link href={ABOUT_PATH}>About</Link>
           <Link href={SUPPORT_PATH}>Support</Link>
+          <a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a>
           <Link href={PRIVACY_PATH}>Privacy</Link>
+          <Link href={TERMS_PATH}>Terms</Link>
           <Link href="/docs">Authoring guide</Link>
           <Link href="/admin">Admin portal</Link>
         </div>
@@ -87,7 +91,7 @@ export default function LegalShell({
         </div>
       </nav>
 
-      <main className={s.legal}>
+      <main className={s.legal} id="main">
         <div className={s.container}>
           <p className={s.kicker}>{kicker}</p>
           <h1 className={s.legalTitle}>{title}</h1>
