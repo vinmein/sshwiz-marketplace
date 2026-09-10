@@ -83,7 +83,7 @@ npm run check-urls -- https://<your-domain>
 It fails loudly on a non-200 or an empty body. With no argument it checks
 `http://localhost:3000`.
 
-Three env vars feed these pages — set them per environment in
+Four env vars feed these pages — set them per environment in
 `apphosting.yaml` (and `.env.local` for local runs):
 
 | Variable | What it's for |
@@ -91,6 +91,7 @@ Three env vars feed these pages — set them per environment in
 | `NEXT_PUBLIC_SITE_URL` | This environment's origin, no trailing slash. Feeds canonical URLs; staging and production must differ. |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | The address shown on `/support`. Defaults to `contact@higglerslab.com`. |
 | `NEXT_PUBLIC_SECURITY_EMAIL` | Where vulnerability reports go. Defaults to the support address. |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Google Analytics 4 measurement ID (`G-…`). Optional; when blank no analytics script is served. Use a separate property for staging. |
 
 Left unset (or still `REPLACE_WITH_…`), the addresses fall back to the
 defaults in `lib/site.ts` and the canonical URL is simply omitted — the pages

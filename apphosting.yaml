@@ -31,3 +31,10 @@ env:
   - variable: NEXT_PUBLIC_SECURITY_EMAIL
     value: "contact@higglerslab.com"
     availability: [BUILD, RUNTIME]
+
+  # Google Analytics 4 measurement ID. Use a separate GA property (or leave
+  # this blank) on staging so test traffic stays out of production reports.
+  # Blank or a REPLACE_WITH placeholder disables the tag entirely.
+  - variable: NEXT_PUBLIC_GA_MEASUREMENT_ID
+    value: "REPLACE_WITH_GA_MEASUREMENT_ID"
+    availability: [BUILD, RUNTIME]

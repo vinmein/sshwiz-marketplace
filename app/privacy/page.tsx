@@ -32,7 +32,8 @@ export default function PrivacyPage() {
           and sent only to the servers you connect to.
         </li>
         <li>
-          <b>No analytics, no telemetry, no tracking cookies</b> in the app or on this site.
+          <b>No analytics, no telemetry, no tracking cookies in the app.</b> This website uses
+          Google Analytics to count page views — details <a href="#website">below</a>.
         </li>
         <li>
           <b>We don&apos;t sell or share personal data</b>, because we don&apos;t collect it.
@@ -117,12 +118,29 @@ export default function PrivacyPage() {
         </li>
       </ul>
 
-      <h2>This website</h2>
+      <h2 id="website">This website</h2>
       <p>
         The public pages — the product page, this policy, the support page and the authoring guide —
-        are static HTML. They set no cookies, run no analytics and embed no third-party trackers. The
-        site is served by Firebase App Hosting, whose infrastructure keeps standard request logs
-        (IP address, timestamp, requested path).
+        are static HTML served by Firebase App Hosting, whose infrastructure keeps standard request
+        logs (IP address, timestamp, requested path).
+      </p>
+      <p>
+        The site uses <b>Google Analytics 4</b> so we can see which pages are read and roughly where
+        visitors come from. It sets first-party <code>_ga</code> cookies to tell repeat visits apart
+        and sends the page URL, referrer, browser and device type, and a truncated IP address (used
+        only to derive a coarse location, then discarded) to Google. Advertising features, Google
+        Signals and ad personalisation are switched off, so nothing is used to build a profile of
+        you or to show you ads, and none of it is linked to the desktop app, which sends no analytics
+        at all. Google&apos;s handling of this data is described in its{" "}
+        <a href="https://policies.google.com/technologies/partner-sites" rel="noopener noreferrer">
+          partner-sites notice
+        </a>
+        . To opt out, block <code>googletagmanager.com</code> in your browser or install
+        Google&apos;s{" "}
+        <a href="https://tools.google.com/dlpage/gaoptout" rel="noopener noreferrer">
+          opt-out add-on
+        </a>
+        .
       </p>
       <p>
         The <b>admin portal</b> at <code>/admin</code> is for the marketplace&apos;s own
@@ -137,9 +155,10 @@ export default function PrivacyPage() {
 
       <h2>Who else sees your data</h2>
       <p>
-        We use two processors, and only for the functions above: <b>Google Firebase</b> (Firestore
-        for the catalog, Authentication for admin sign-in, App Hosting for this site) and, if you
-        turn on AI assist, <b>the AI provider you choose</b>. We don&apos;t sell personal data, we
+        We use two processors, and only for the functions above: <b>Google</b> (Firestore for the
+        catalog, Firebase Authentication for admin sign-in, App Hosting for this site, and Google
+        Analytics for this site&apos;s page-view counts) and, if you turn on AI assist, <b>the AI
+        provider you choose</b>. We don&apos;t sell personal data, we
         don&apos;t share it for advertising, and we don&apos;t run profiling. We would disclose data
         if legally compelled — but for app users, there is essentially nothing to disclose.
       </p>

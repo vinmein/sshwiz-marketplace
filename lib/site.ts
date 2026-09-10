@@ -41,6 +41,14 @@ export const SUPPORT_EMAIL =
 export const SECURITY_EMAIL =
   configured(process.env.NEXT_PUBLIC_SECURITY_EMAIL) || SUPPORT_EMAIL;
 
+/** Google Analytics 4 measurement ID (`G-XXXXXXXXXX`). Leave unset to ship
+    without analytics — the tag is only rendered when this is configured, and
+    the privacy policy describes what it collects. */
+export const GA_MEASUREMENT_ID = (() => {
+  const raw = configured(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID);
+  return /^G-[A-Z0-9]+$/.test(raw) ? raw : "";
+})();
+
 /** Effective date shown on the privacy policy. Bump it whenever the policy
     text changes — store reviewers check that the page is dated. */
-export const PRIVACY_UPDATED = "9 September 2026";
+export const PRIVACY_UPDATED = "10 September 2026";

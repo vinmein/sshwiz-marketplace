@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SITE_URL } from "@/lib/site";
+import GoogleAnalytics from "./GoogleAnalytics";
 
 export const metadata: Metadata = {
   // Absolute base for the canonical URLs the public pages declare. Unset in
@@ -13,7 +14,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <GoogleAnalytics />
+      </body>
     </html>
   );
 }
