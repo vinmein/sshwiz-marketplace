@@ -126,12 +126,11 @@ const structuredData = {
  *
  * macOS ships through the Mac App Store; Windows is the NSIS installer attached
  * to the GitHub release (the vinmein/sshwiz repo must be public for that URL to
- * resolve for visitors). Linux still points back at this section until its
- * release artefacts are published.
+ * resolve for visitors). Linux has no card yet: add one here once its release
+ * artefacts are published.
  */
 const DOWNLOADS = {
   mac: "https://apps.apple.com/in/app/sshwiz/id6810221496?mt=12",
-  linux: "#download",
   windows: "https://github.com/vinmein/sshwiz/releases/download/v0.1.0/sshwiz_0.1.0_x64-setup.exe",
 };
 
@@ -1026,9 +1025,6 @@ function Download() {
               rel="noopener noreferrer"
             >
               🍎 macOS <small>Mac App Store · Apple silicon &amp; Intel</small>
-            </a>
-            <a className={s.platform} href={DOWNLOADS.linux}>
-              🐧 Linux <small>AppImage &amp; .deb</small>
             </a>
             <a className={s.platform} href={DOWNLOADS.windows} target="_blank" rel="noopener noreferrer">
               🪟 Windows <small>x64 installer (.exe)</small>
