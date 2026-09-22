@@ -124,10 +124,11 @@ const structuredData = {
  * app screenshot below is a hand-built HTML/CSS replica of the real UI, so the
  * page stays sharp on every display and costs nothing to load.
  *
- * TODO: point these at the real release artefacts once builds are published.
+ * macOS ships through the Mac App Store. Linux and Windows still point back at
+ * this section until their release artefacts are published.
  */
 const DOWNLOADS = {
-  mac: "#download",
+  mac: "https://apps.apple.com/in/app/sshwiz/id6810221496?mt=12",
   linux: "#download",
   windows: "#download",
 };
@@ -1016,8 +1017,13 @@ function Download() {
             the shelf gets you.
           </p>
           <div className={s.platforms}>
-            <a className={s.platform} href={DOWNLOADS.mac}>
-              🍎 macOS <small>Apple silicon &amp; Intel</small>
+            <a
+              className={s.platform}
+              href={DOWNLOADS.mac}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              🍎 macOS <small>Mac App Store · Apple silicon &amp; Intel</small>
             </a>
             <a className={s.platform} href={DOWNLOADS.linux}>
               🐧 Linux <small>AppImage &amp; .deb</small>
