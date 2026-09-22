@@ -124,13 +124,15 @@ const structuredData = {
  * app screenshot below is a hand-built HTML/CSS replica of the real UI, so the
  * page stays sharp on every display and costs nothing to load.
  *
- * macOS ships through the Mac App Store. Linux and Windows still point back at
- * this section until their release artefacts are published.
+ * macOS ships through the Mac App Store; Windows is the NSIS installer attached
+ * to the GitHub release (the vinmein/sshwiz repo must be public for that URL to
+ * resolve for visitors). Linux still points back at this section until its
+ * release artefacts are published.
  */
 const DOWNLOADS = {
   mac: "https://apps.apple.com/in/app/sshwiz/id6810221496?mt=12",
   linux: "#download",
-  windows: "#download",
+  windows: "https://github.com/vinmein/sshwiz/releases/download/v0.1.0/sshwiz_0.1.0_x64-setup.exe",
 };
 
 export default function LandingPage() {
@@ -1028,8 +1030,8 @@ function Download() {
             <a className={s.platform} href={DOWNLOADS.linux}>
               🐧 Linux <small>AppImage &amp; .deb</small>
             </a>
-            <a className={s.platform} href={DOWNLOADS.windows}>
-              🪟 Windows <small>x64 installer</small>
+            <a className={s.platform} href={DOWNLOADS.windows} target="_blank" rel="noopener noreferrer">
+              🪟 Windows <small>x64 installer (.exe)</small>
             </a>
           </div>
           <p className={s.microNote}>

@@ -21,8 +21,9 @@ How the pieces fit:
 - **Landing page (`/`)** — the public product page for sshwiz. Static, no
   client JS; styles live in `app/landing.module.css` so they can't leak into
   the portal's theme. Download links live in `DOWNLOADS` at the top of
-  `app/page.tsx`: macOS points at the Mac App Store listing; Linux and Windows
-  are placeholders until release artefacts exist.
+  `app/page.tsx`: macOS points at the Mac App Store listing, Windows at the
+  installer on the GitHub release; Linux is a placeholder until release
+  artefacts exist.
 - **Portal (`/admin`)** — authenticated CRUD for `packages` and `scripts`
   collections, with a publish toggle per item.
 - **Support (`/support`) and Privacy (`/privacy`)** — the two public pages the
