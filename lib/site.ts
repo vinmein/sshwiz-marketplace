@@ -69,12 +69,12 @@ export const GA_MEASUREMENT_ID = (() => {
 export const PRIVACY_UPDATED = "10 September 2026";
 
 /** Effective date shown on the terms of service. Same rule as above. */
-export const TERMS_UPDATED = "10 September 2026";
+export const TERMS_UPDATED = "22 September 2026";
 
 /** When the landing page copy last materially changed, as an ISO date. Shown
     in a <time> element and as `dateModified` in the page's structured data —
     bump it when the marketing copy changes, not on every deploy. */
-export const LANDING_UPDATED = "2026-09-10";
+export const LANDING_UPDATED = "2026-09-22";
 
 /** Public profiles for the `sameAs` links in the Organization schema. Add
     social accounts here as they are created. */

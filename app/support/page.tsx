@@ -20,14 +20,14 @@ export default function SupportPage() {
     <LegalShell
       kicker="Support"
       title="Stuck? Write to a human."
-      lede="sshwiz is in its Phase 1 preview and support is handled by the people who build it. There's no ticket portal to sign up for — one email address, answered in order."
+      lede="Support is handled by the people who build sshwiz. There's no ticket portal to sign up for — one email address, answered in order."
     >
       <div className={s.contact}>
         <p className={s.contactMail}>
           <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
         </p>
         <p>
-          We aim to reply within two business days. Preview releases get bug reports triaged first.
+          We aim to reply within two business days. Bug reports are triaged first.
         </p>
       </div>
 
@@ -93,9 +93,12 @@ export default function SupportPage() {
 
       <h2>Refunds and billing</h2>
       <p>
-        sshwiz is free through the Phase 1 preview and there is nothing to bill. If and when paid
-        Pro plans start, the terms and refund policy will be published here before anyone is
-        charged.
+        The app is free; Pro is an optional yearly subscription. If you bought Pro on the Mac App
+        Store, billing, cancellation and refunds are handled by Apple: manage the subscription in
+        your App Store account settings and request refunds at reportaproblem.apple.com. If you
+        bought a Pro licence directly from us, write to the address above with the email you used
+        at checkout and we will sort it out. Cancelling stops the next renewal; access continues to
+        the end of the paid period.
       </p>
 
       <h2>Privacy</h2>

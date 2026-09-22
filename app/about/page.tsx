@@ -55,8 +55,8 @@ export default function AboutPage() {
 
       <h2>Who makes it</h2>
       <p>
-        {ORG_NAME} builds and supports sshwiz. During the Phase 1 preview the people who write the
-        code also answer the support inbox — write to{" "}
+        {ORG_NAME} builds and supports sshwiz. The people who write the code also answer the
+        support inbox — write to{" "}
         <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> or see the{" "}
         <Link href={SUPPORT_PATH}>support page</Link> for what to include.
       </p>

@@ -73,9 +73,14 @@ const structuredData = {
       url: SITE_URL,
       description: DESCRIPTION,
       applicationCategory: "DeveloperApplication",
-      operatingSystem: "macOS, Linux, Windows",
-      softwareVersion: "0.2 (Phase 1 preview)",
-      offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free during the Phase 1 preview" },
+      operatingSystem: "macOS, Windows",
+      softwareVersion: "0.2",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+        description: "Free to download and use. Optional Pro yearly subscription unlocks extra views.",
+      },
       author: { "@id": `${SITE_URL}/#organization` },
       publisher: { "@id": `${SITE_URL}/#organization` },
       image: `${SITE_URL}/opengraph-image`,
@@ -124,14 +129,14 @@ const structuredData = {
  * app screenshot below is a hand-built HTML/CSS replica of the real UI, so the
  * page stays sharp on every display and costs nothing to load.
  *
- * macOS ships through the Mac App Store; Windows is the NSIS installer attached
- * to the GitHub release (the vinmein/sshwiz repo must be public for that URL to
- * resolve for visitors). Linux has no card yet: add one here once its release
- * artefacts are published.
+ * macOS ships through the Mac App Store; Windows is the NSIS installer served
+ * from this site's public/ folder (a copy of the GitHub release asset, kept
+ * here because the vinmein/sshwiz repo is private). Linux has no card yet: add
+ * one here once its release artefacts are published.
  */
 const DOWNLOADS = {
   mac: "https://apps.apple.com/in/app/sshwiz/id6810221496?mt=12",
-  windows: "https://github.com/vinmein/sshwiz/releases/download/v0.1.0/sshwiz_0.1.0_x64-setup.exe",
+  windows: "/sshwiz_0.1.0_x64-setup.exe",
 };
 
 export default function LandingPage() {
@@ -143,7 +148,7 @@ export default function LandingPage() {
       <header className={s.hero}>
         <div className={s.container}>
           <span className={s.eyebrow}>
-            <b>New</b> Phase 1 preview — the Shelf, Market and AI assist are live
+            <b>New</b> sshwiz is on the Mac App Store — free, with an optional Pro tier
           </span>
 
           <h1 className={s.h1}>
@@ -169,8 +174,7 @@ export default function LandingPage() {
           </div>
 
           <p className={s.microNote}>
-            Free during the Phase 1 preview · macOS, Linux and Windows · your keys never leave your
-            machine
+            Free to use · Pro is optional · macOS and Windows · your keys never leave your machine
           </p>
 
           <AppShot />
@@ -279,7 +283,7 @@ function AppShot() {
             <span className={s.dot} style={{ background: "#28c840" }} />
           </div>
           <span className={s.appTitle}>sshwiz</span>
-          <span className={s.appTag}>Phase 1 prototype</span>
+          <span className={s.appTag}>Free tier</span>
         </div>
 
         <div className={s.appBody}>
@@ -422,7 +426,7 @@ function Takeaways() {
           </p>
           <ol>
             <li>
-              <b>sshwiz is a desktop app</b> for macOS, Linux and Windows that sets up a Linux server
+              <b>sshwiz is a desktop app</b> for macOS and Windows that sets up a Linux server
               over a normal SSH connection. Nothing is installed on the server itself.
             </li>
             <li>
@@ -438,8 +442,9 @@ function Takeaways() {
               file whose key lives in the OS keychain.
             </li>
             <li>
-              <b>Free during the Phase 1 preview</b>, with the Pro tabs included for everyone who
-              joins now.
+              <b>Free to use.</b> One server at a time, the whole Shelf, Dashboard, Services and the
+              terminal cost nothing. Pro is an optional yearly subscription for the day-two views
+              below.
             </li>
           </ol>
         </div>
@@ -685,17 +690,17 @@ function AiSection() {
               <code>
                 <span className={s.c}>{"# everything published, as JSON\n"}</span>
                 {'curl -H "Authorization: Bearer $SSHWIZ_KEY" \\\n  '}
-                <span className={s.s}>https://sshwiz.app/api/marketplace</span>
+                <span className={s.s}>https://sshwiz.com/api/marketplace</span>
                 {"\n\n"}
                 <span className={s.c}>{"# just the Ubuntu/Debian packages\n"}</span>
                 {'curl -H "Authorization: Bearer $SSHWIZ_KEY" \\\n  '}
                 <span className={s.s}>
-                  https://sshwiz.app/api/marketplace/packages?family=ubuntu
+                  https://sshwiz.com/api/marketplace/packages?family=ubuntu
                 </span>
                 {"\n\n"}
                 <span className={s.c}>{"# one script by id\n"}</span>
                 {'curl -H "Authorization: Bearer $SSHWIZ_KEY" \\\n  '}
-                <span className={s.s}>https://sshwiz.app/api/marketplace/scripts/harden-ssh</span>
+                <span className={s.s}>https://sshwiz.com/api/marketplace/scripts/harden-ssh</span>
               </code>
             </pre>
           </div>
@@ -869,12 +874,12 @@ function Compare() {
 /* ----------------------------------------------------------------- pro --- */
 
 const PRO_TABS = [
-  { icon: "📊", name: "Dashboard", note: "Load, memory, disk and uptime at a glance" },
-  { icon: "⚙️", name: "Services", note: "systemd units — start, stop, restart, enable" },
+  { icon: "🗂", name: "Simultaneous sessions", note: "Several servers open in tabs at once" },
   { icon: "🐳", name: "Docker", note: "Containers, images and logs without the CLI" },
   { icon: "📋", name: "Logs", note: "Tail and search journald and file logs live" },
   { icon: "📁", name: "Files", note: "Browse, edit and transfer over the same session" },
   { icon: "🛡", name: "Security", note: "Firewall, SSH hardening and update posture" },
+  { icon: "✨", name: "AI assist", note: "Bring your own key; drafts commands and recipes for review" },
 ];
 
 function Pro() {
@@ -882,11 +887,13 @@ function Pro() {
     <section className={s.section} id="pro">
       <div className={s.container}>
         <div className={`${s.sectionHead} ${s.centered}`}>
-          <p className={s.kicker}>Coming with Pro</p>
+          <p className={s.kicker}>Free and Pro</p>
           <h2 className={s.h2}>The rest of the cockpit</h2>
           <p className={s.sub}>
-            Provisioning is step one. These tabs turn the same connection into day-two operations —
-            in preview now, and included for everyone who joins during Phase 1.
+            The free tier covers one server at a time, the whole Shelf, Dashboard, Services and the
+            terminal. Pro is an optional yearly subscription that turns the same connection into
+            day-two operations with the views below. Upgrade inside the app; on macOS it is billed
+            through the App Store.
           </p>
         </div>
         <div className={s.proGrid}>
@@ -1013,9 +1020,9 @@ function Download() {
           <h2 className={s.h2}>Your next server, set up before the coffee cools</h2>
           <p className={s.sub} style={{ maxWidth: "54ch", margin: "14px auto 0" }}>
             Our recommendation: if you set up servers by hand more than once a month, sshwiz will
-            pay for the download in the first session. It is free through the Phase 1 preview, so
+            pay for itself in the first session. The download is free and the Shelf is free, so
             install it, point it at a box you were going to set up by hand anyway, and see how far
-            the shelf gets you.
+            the shelf gets you. Pro is there when you want the day-two views.
           </p>
           <div className={s.platforms}>
             <a

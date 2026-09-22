@@ -6,7 +6,7 @@ import { ORG_NAME, PRIVACY_PATH, SUPPORT_EMAIL, TERMS_PATH, TERMS_UPDATED } from
 export const metadata: Metadata = {
   title: "Terms of service",
   description:
-    "The terms for using the sshwiz desktop app, the recipe marketplace and this website during the Phase 1 preview.",
+    "The terms for using the sshwiz desktop app, the optional Pro subscription, the recipe marketplace and this website.",
   alternates: { canonical: TERMS_PATH },
   openGraph: { url: TERMS_PATH, title: "Terms of service · sshwiz" },
 };
@@ -27,12 +27,15 @@ export default function TermsPage() {
         these terms go to <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
 
-      <h2>2. The preview</h2>
+      <h2>2. Free tier and Pro subscription</h2>
       <p>
-        sshwiz is in a Phase 1 preview. It is provided free of charge for the duration of the
-        preview, it may change, and features may be added, altered or removed without notice.
-        Anything described as &quot;Pro&quot; or &quot;coming&quot; is a preview of intent, not a
-        promise.
+        The sshwiz desktop app is free to download and use. Some views and capabilities are part of
+        an optional Pro subscription, billed yearly. On the Mac App Store build the subscription is
+        purchased from, billed by and managed through Apple under Apple&apos;s standard terms; on
+        other builds it is purchased from {ORG_NAME} through our licensing provider. Either way it
+        renews automatically unless cancelled before the end of the current period. sshwiz is under
+        active development: features may be added, altered or removed, and which features sit in the
+        free tier or in Pro may change between versions.
       </p>
 
       <h2>3. Your servers are your responsibility</h2>
@@ -104,7 +107,7 @@ export default function TermsPage() {
         incidental, special or consequential damages, or for loss of data, revenue or servers,
         arising from your use of sshwiz, the marketplace or a recipe — even if we were advised of
         the possibility. Where liability cannot be excluded, it is limited to the amount you paid
-        us for sshwiz in the twelve months before the claim, which during the preview is zero.
+        us for sshwiz in the twelve months before the claim.
       </p>
 
       <h2>11. Privacy</h2>

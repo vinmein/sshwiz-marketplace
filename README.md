@@ -22,8 +22,9 @@ How the pieces fit:
   client JS; styles live in `app/landing.module.css` so they can't leak into
   the portal's theme. Download links live in `DOWNLOADS` at the top of
   `app/page.tsx`: macOS points at the Mac App Store listing, Windows at the
-  installer on the GitHub release; the Linux card is omitted until release
-  artefacts exist.
+  installer copied into `public/` (the desktop repo is private, so the GitHub
+  release asset is not publicly reachable); the Linux card is omitted until
+  release artefacts exist.
 - **Portal (`/admin`)** — authenticated CRUD for `packages` and `scripts`
   collections, with a publish toggle per item.
 - **Support (`/support`) and Privacy (`/privacy`)** — the two public pages the
