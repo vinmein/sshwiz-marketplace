@@ -3,6 +3,9 @@
 // and a nonce would force every page to render dynamically (no static
 // /support and /privacy, which the store listings depend on). The Firebase
 // and Google origins are what the admin portal and GA4 talk to.
+// Next's development bundles use eval for source maps. Allow it only for
+// local development so client components hydrate; production stays strict.
+const isDevelopment = process.env.NODE_ENV === "development";
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -12,7 +15,7 @@ const csp = [
   "img-src 'self' data: blob: https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com`,
   "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com",
   "frame-src https://*.firebaseapp.com https://accounts.google.com",
   "upgrade-insecure-requests",

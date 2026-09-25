@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import s from "./landing.module.css";
 import JsonLd from "./JsonLd";
+import AppWalkthrough from "./AppWalkthrough";
 import { BrandGlyph, SiteFooter } from "./SiteChrome";
 import { LANDING_UPDATED, SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -125,9 +126,8 @@ const structuredData = {
 };
 
 /**
- * Public product page. Rendered as a server component with no client JS — the
- * app screenshot below is a hand-built HTML/CSS replica of the real UI, so the
- * page stays sharp on every display and costs nothing to load.
+ * Public product page. The animated SVG walkthrough is an isolated client
+ * component; the rest of the landing page is rendered on the server.
  *
  * macOS ships through the Mac App Store; Windows is the NSIS installer served
  * from this site's public/ folder (a copy of the GitHub release asset, kept
@@ -168,8 +168,8 @@ export default function LandingPage() {
             <a className={`${s.btn} ${s.btnPrimary}`} href="#download">
               Download sshwiz
             </a>
-            <a className={`${s.btn} ${s.btnGhost}`} href="#shelf">
-              See how the Shelf works
+            <a className={`${s.btn} ${s.btnGhost}`} href="#app-demo">
+              See how it works
             </a>
           </div>
 
@@ -178,6 +178,13 @@ export default function LandingPage() {
           </p>
 
           <AppShot />
+
+          <div className={s.sectionHead} style={{ margin: "64px auto 0" }}>
+            <p className={s.kicker}>See it in action</p>
+            <h2 className={s.h2}>From connection to installation</h2>
+            <p className={s.sub}>Follow a Docker install, one step at a time.</p>
+          </div>
+          <AppWalkthrough />
 
           <div className={s.strip}>
             <span>
