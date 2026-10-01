@@ -177,6 +177,8 @@ export default function LandingPage() {
             Free to use · Pro is optional · macOS and Windows · your keys never leave your machine
           </p>
 
+
+          <a href="https://spotrove.com/products/sshwiz-set-up-a-linux-server-in-a-few-clicks-over-ssh-5a32e187?ref=badge" target="_blank" rel="noopener"><img src="https://spotrove.com/badge/sshwiz-set-up-a-linux-server-in-a-few-clicks-over-ssh-5a32e187/new.svg" alt="sshwiz - New on Spotrove" width="250" height="54" /></a>
           <AppShot />
 
           <div className={s.sectionHead} style={{ margin: "64px auto 0" }}>
